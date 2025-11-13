@@ -1,10 +1,13 @@
 # NetflixClone
-Developed a responsive Netflix-like web app using React, Tailwind CSS, and the TMDB API to display live movie and TV listings.
+I’m building a Netflix-style web app as a personal project to practice full-stack development.  
+It uses React for the front-end and connects to the TMDB API to show live movie and TV data.  
+Later, I plan to connect it with a Spring Boot backend for login and data storage.
 
 
 # Overview
-The goal of this project is to recreate a Netflix-like browsing experience.
-I’m currently building reusable React components, fetching data from the TMDB API, and planning to integrate a Spring Boot backend later.
+The main goal is to recreate the browsing experience of a streaming platform.  
+Right now, I’m focusing on learning how APIs work and how to structure reusable React components.  
+Once I get the backend working, I’ll start integrating both sides together.
 
 # What is used
 FrontEnd: React, Tailwind CSS, Axios, React Router  
