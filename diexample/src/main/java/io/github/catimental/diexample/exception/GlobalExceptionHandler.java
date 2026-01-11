@@ -4,12 +4,34 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.util.Map;
 
 
-@ControllerAdvice
+
+@RestControllerAdvice
 public class GlobalExceptionHandler {
+
+
+    @ExceptionHandler(ApiException.class)
+    public ResponseEntity<ErrorResponse> handleApi(ApiException e){
+        var body = new ErrorResponse(e.getErrorCode().name(), e.getMessage());
+        return ResponseEntity.badRequest().body(body);
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
     @ExceptionHandler(IllegalStateException.class) 
     public ResponseEntity<?> handleIllegalState(IllegalStateException e){
         return ResponseEntity

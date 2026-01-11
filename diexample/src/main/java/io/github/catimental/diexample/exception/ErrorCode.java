@@ -1,0 +1,11 @@
+package io.github.catimental.diexample.exception;
+
+public enum ErrorCode {
+    DUPLICATE_LOGIN_ID,
+    MEMBER_NOT_FOUND,
+    INVALID_PASSWORD,
+    WATCHLIST_NOT_FOUND,
+    ALREADY_WACHLISTED,
+    INVALID_PROGESS,
+    PROGRESS_NOT_FOUND
+}
