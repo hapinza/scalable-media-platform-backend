@@ -26,7 +26,7 @@ Spring Boot backend for member registration and login (prsent)
 4. Integrate the API with React frontend using Axios (planned)
 5. UI design with Tailwind CSS (planned)
    
-## Authentication & Security 
+# Authentication & Security 
 1. JWT based authentication with Spring security
 2. hashing the password with BCryptPasswordEncoder
 3. Stateless authentication with access token
