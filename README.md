@@ -15,14 +15,20 @@ BackEnd: Spring Boot, MySQL, JPA
 API: The Movie database API
 Tools: VS Code, Git
 
-# Featues / Prgress
+# Features / Prgress
 Netflix-style browsing interface (React + Tailwind CSS)
 Watchlist and favorite collections 
 Spring Boot backend for member registration and login (prsent)
 
 1. Ser Spring Boot project structure and tested enviorment (completed)
-2. Built basic member registration and login endpoints using REST API (now)
-3. Connecting backend logic with database via JPA/MySQL (planned)
+2. Built basic member registration and login endpoints using REST API (completed)
+3. Connecting backend logic with database via JPA/MySQL, implementing JWT based authentication (progress)
 4. Integrate the API with React frontend using Axios (planned)
 5. UI design with Tailwind CSS (planned)
    
+# Authentication & Security 
+1. JWT based authentication with Spring security
+2. hashing the password with BCryptPasswordEncoder
+3. Stateless authentication with access token
+4. Authentication principal extraction for user specific operations
+5. Securing APIs with Spring security filter chain
