@@ -9,6 +9,8 @@ import java.util.Map;
 import io.github.catimental.diexample.DTO.MemberLoginRequest;
 import io.github.catimental.diexample.DTO.MemberRegisterRequest;
 import io.github.catimental.diexample.DTO.MemberResponse;
+import io.github.catimental.diexample.DTO.refreshToken.TokenPairResponse;
+
 import org.springframework.security.core.Authentication;
 
 // member connection
@@ -33,13 +35,15 @@ public class MemberRestController {
 
 
     @PostMapping("/login")
-    public ResponseEntity<MemberRsponse> login(@ResquestBody MemberLoginRequest req){
+    public ResponseEntity<TokenPairResponse> login(@ResquestBody MemberLoginRequest req){
         return ResponseEntity.ok(memberService.login(req));
     }
 
     @PutMapping("/modify")
-    public ResponseEntity<MemberResponse> updateMember(@RequestBody MmeberUpdateRequest req){
-        return ResponseEntity.ok(memberService.updateMember(req));
+    public ResponseEntity<MemberResponse> updateMember(@RequestBody MemberUpdateRequest req, Authentication authentication){
+        Long memberId = (Long) authentication.getPrincipal();
+
+        return ResponseEntity.ok(memberService.updateMember(memberId , req));
 
     }
 

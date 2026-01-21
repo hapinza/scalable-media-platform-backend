@@ -24,7 +24,8 @@ public class SecurityConfig {
         .cors(Costomizer.withDefault())
         .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(auth -> auth
-            .requestMatchers("/members/register", "/members/login").permitAll()
+            .requestMatchers("/members/register", "/members/login", "/auth/refresh", "/auth/logout",
+            "/movies/trending", "/analytics/views/**").permitAll()
             .anyRequest().authenticated()
         )
         .addFilterBefore(new JwtAuthFilter(jwtProvider), UsernamePasswordAuthenticationFilter.class);

@@ -1,6 +1,8 @@
 package io.github.catimental.diexample.Service;
 
 import org.springframework.stereotype.Service;
+
+import ch.qos.logback.core.subst.Token;
 import io.github.catimental.diexample.domain.Member;
 import io.github.catimental.diexample.exception.ErrorCode;
 import io.github.catimental.diexample.security.JwtProvider;
@@ -16,6 +18,8 @@ import java.time.LocalDateTime;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import io.github.catimental.diexample.security.*;
+import io.github.catimental.diexample.Service.RefreshTokenService;
+import io.github.catimental.diexample.DTO.refreshToken.TokenPairResponse;
 
 @Service
 @Transactional
@@ -26,12 +30,15 @@ public class MemberService {
     
     private final JwtProvider jwtProvider;
 
+    private final RefreshTokenService refreshTokenService;
+
 
     public MemberService(MemberRepository memberRepository, PasswordEncoder passwordEncoder, 
-          JwtProvider jwtProvider){
+          JwtProvider jwtProvider, RefreshTokenService refreshTokenService){
         this.memberRepository = memberRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtProvider = jwtProvider;
+        this.refreshTokenService = refreshTokenService;
     }
 
 
@@ -56,7 +63,7 @@ public class MemberService {
 
 
 
-    public MemberResponse login(MemberLoginRequest req){
+    public TokenPairResponse login(MemberLoginRequest req){
         Member member = memberRepository.findByLoginId(req.loginid())
                         .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND, "id no exist"));
         
@@ -65,16 +72,20 @@ public class MemberService {
         }
 
 
-        String token = jwtProvider.createAccessToken(member.getId(), member.getRole().name());
+        String access = jwtProvider.createAccessToken(member.getId(), member.getRole().name());
+        String refresh = refreshTokenService.issue(member);
 
-        return new MemberResponse(member.getId(), member.getLoginId(), member.getRoleName());
+        return new TokenPairResponse(access, refresh);
+
+        //return new MemberResponse(member.getId(), member.getLoginId(), member.getRoleName());
 
     }
 
+    
 
 
 
-    public MemberResponse updateMember(MemberUpdateRequest req){
+    public void updateMember(Long memberId, MemberUpdateRequest req){
         
 
     }
