@@ -44,11 +44,13 @@ public class WatchlistService {
 
     @Transactional(readOnly = true)
     public List<WatchlistItemResponse> list(Long memberId){
-        return watchlistRepository.findAllByMemberIdOrderByCreatedAtDesc(memberId)
-                                    .stream() // stream list
-                                    .map(w -> new WatchlistItemResponse(w.getMovieId(), w.getCreatedAt()))
-                                    .toList();
+        // return watchlistRepository.findAllByMemberIdOrderByCreatedAtDesc(memberId)
+        //                             .stream() // stream list
+        //                             .map(w -> new WatchlistItemResponse(w.getMovieId(), w.getCreatedAt()))
+        //                             .toList();
 
+
+        return watchlistRepository.findItem(memberId);
     }
 
 

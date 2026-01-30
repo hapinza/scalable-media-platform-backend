@@ -58,7 +58,7 @@ public class MovieLikeService {
     @Transactional(readOnly = true)
     public Page<MovieLikeItemResponse> likeLists(Long movieId, Page pageable){
         return movieLikeRepository.findAllByMemebrIdAndLikeTrueOrderByUpdatedAtDesc(memberId, pageable)
-                            .mpa(p -> new MovieLikeItemResponse(p.getMovieId(), p.islike(), p.getUpdatedAt(analyticsController)))
+                            .map(p -> new MovieLikeItemResponse(p.getMovieId(), p.islike(), p.getUpdatedAt(analyticsController)))
 
 
 

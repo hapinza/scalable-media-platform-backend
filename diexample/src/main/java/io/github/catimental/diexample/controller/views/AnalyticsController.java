@@ -28,9 +28,10 @@ public class AnalyticsController {
         Long memberId = null;
         if(authentication != null && authentication.getPrincipal() != null){
             if(authentication.getPrincipal() instanceof Long pid) memberId = pid;
-
         }
         viewEventService.track(memberId, movieId);
+        // we wait until viewEvent stores the data. However, this takes time quite a lot
+        // instead we immediatelt return with Kafka
         return ResponseEntity.ok().build();
     }
 

@@ -83,7 +83,7 @@ public interface ViewEventRepository extends JpaRepository<ViewEvent, Long>{
         Long getMovieId();
         Long getViewCount();
         Long getLikeCount();
-        Long getSCore();   
+        Long getScore();   
     }
         
 

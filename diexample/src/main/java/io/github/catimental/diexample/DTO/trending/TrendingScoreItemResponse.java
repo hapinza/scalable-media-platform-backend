@@ -5,5 +5,4 @@ public record TrendingScoreItemResponse (
     Long viewCount,
     Long likeCount,
     Long score
-
 ){}
