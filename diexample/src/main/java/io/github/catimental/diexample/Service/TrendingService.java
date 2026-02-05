@@ -56,7 +56,9 @@ public class TrendingService {
     }
 
 
-    public TrendingService(ViewEventRepository viewEventRepository){
+    public TrendingService(ViewEventRepository viewEventRepository, StringRedisTemplate redisTemplate, 
+        ObjectMapper objectMapper
+    ){
         this.viewEventRepository = viewEventRepository;
     }
 
@@ -78,7 +80,7 @@ public class TrendingService {
             try{
                 TrendingPageCache cache = objectMapper.readValue(cachedJson, TrendingPageCache.class);
 
-                Pageable pageable = PageRequest.of(cache.pag(), cache.size());
+                Pageable pageable = PageRequest.of(cache.page(), cache.size());
 
                 return new PageImpl<>(cache.items(), pageable, cache.getTotalElements());
             }catch(Exception e){

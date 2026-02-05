@@ -10,13 +10,12 @@ import io.github.catimental.diexample.domain.watchlist.Watchlist;
 import io.github.catimental.diexample.domain.Member;
 import io.github.catimental.diexample.DTO.*;
 
-
 public class WatchlistService {
     
     private final WatchlistRepository watchlistRepository;
     private final MemberRepository memberRepository;
 
-
+    
 
 
     public void add(Long memberId, Long movieId){
@@ -30,7 +29,7 @@ public class WatchlistService {
                         .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND, "Member does not exist"));
 
 
-        watchlistRepository.save(new Watchlist(member, memberId));
+        watchlistRepository.save(new Watchlist(member, movieId));
     }
 
 
@@ -48,8 +47,7 @@ public class WatchlistService {
         //                             .stream() // stream list
         //                             .map(w -> new WatchlistItemResponse(w.getMovieId(), w.getCreatedAt()))
         //                             .toList();
-
-
+        
         return watchlistRepository.findItem(memberId);
     }
 

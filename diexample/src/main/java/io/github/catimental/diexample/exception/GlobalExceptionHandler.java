@@ -17,6 +17,18 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ApiException.class)
     public ResponseEntity<ErrorResponse> handleApi(ApiException e){
         var body = new ErrorResponse(e.getErrorCode().name(), e.getMessage());
+       
+        if(e.getErrorCode() == ErrorCode.RATE_LIMITED){
+            return ResponseEntity.status(429).body(body);
+        }
+        if(e.getErrorCode() == ErrorCode.ALREADY_WACHLISTED){
+            return ResponseEntity.status(409).body(body);
+        }
+        if(e.getErrorCode() == ErrorCode.WATCHLIST_NOT_FOUND){{
+            return ResponseEntity.status(404).body(body);
+        }
+
+
         return ResponseEntity.badRequest().body(body);
     }
 

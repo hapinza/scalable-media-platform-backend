@@ -52,6 +52,7 @@ public class MovieLike {
 
     public Long getMovieId(){ return this.movieId; }
     public boolean isLike(){return this.like; }
+    public LocalDateTime getUpdatedAt(){return this.getUpdatedAt;}
 
 
 

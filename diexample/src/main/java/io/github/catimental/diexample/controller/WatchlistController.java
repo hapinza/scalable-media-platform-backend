@@ -38,9 +38,12 @@ public class MemberController {
     
     
     @GetMapping
-    public ResponseEntity<List<WatchlistItemResponse>> list(Authentication authentication){
+    public ResponseEntity<Page<WatchlistItemResponse>> list(Authentication authentication,
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "20") int size
+    ){
          Long memberId = (Long) authentication.getPrincipal();
-         return ResponseEntity.ok(watchlistService.list(memberId));    
+         return ResponseEntity.ok(watchlistService.list(memberId, page, size));    
     }
     
     

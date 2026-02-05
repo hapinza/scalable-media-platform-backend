@@ -17,15 +17,13 @@ import org.springframework.data.domain.Pageable;
 @Transactional
 public class MovieLikeService {
 
-    private final AnalyticsController analyticsController;
-    
+  
     private final MovieLikeRepository movieLikeRepository;
     private final MemberRepository memberRepository;
 
     public MovieLikeService(MovieLikeRepository movieLikeRepository, MemberRepository memberRepository, AnalyticsController analyticsController){
         this.movieLikeRepository = movieLikeRepository;
         this.memberRepository = memberRepository;
-        this.analyticsController = analyticsController;
     }
 
 
@@ -52,17 +50,13 @@ public class MovieLikeService {
                         .orElseThrow(() -> new ApiException(ErrorCode.LIKE_NOT_FOUND, "There is not like"));
 
         movieLikeRepository.delete(ml);
-
     }
 
+
     @Transactional(readOnly = true)
-    public Page<MovieLikeItemResponse> likeLists(Long movieId, Page pageable){
+    public Page<MovieLikeItemResponse> likeLists(Long memberId, Pageable pageable){
         return movieLikeRepository.findAllByMemebrIdAndLikeTrueOrderByUpdatedAtDesc(memberId, pageable)
-                            .map(p -> new MovieLikeItemResponse(p.getMovieId(), p.islike(), p.getUpdatedAt(analyticsController)))
-
-
-
-
+                            .map(p -> new MovieLikeItemResponse(p.getMovieId(), p.isLike(), p.getUpdatedAt()));
     } 
 
 

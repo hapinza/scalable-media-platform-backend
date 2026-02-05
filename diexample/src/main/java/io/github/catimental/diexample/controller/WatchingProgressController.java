@@ -37,10 +37,13 @@ public class WatchingProgressController {
 
 
     @GetMapping
-    public ResponseEntity<List<ProgressItemResponse>> list(Authentication authentication){
+    public ResponseEntity<List<ProgressItemResponse>> list(Authentication authentication
+        @RequestParam(defaultValue ="0") int page,
+        @RequestParam(defaultValue = "20") int size
+    ){
         Long memberId = (Long) authentication.getPrincipal();
         
-        return ResponseEntity.ok(watchingProgressService.list(memberId));
+        return ResponseEntity.ok(watchingProgressService.list(memberId, page, size));
     }
 
     @DeleteMapping("/{movieId}")

@@ -8,6 +8,7 @@ import io.github.catimental.diexample.domain.*;
     name = "watchlist",
     uniqueConstraints = {
         @UniqueConstraint(name = "uk_watchlist_member_movie", columnNames = {"member_id", "movie_id"})
+        indexes = @Index(name = "idx_watchlist_member_created" , columnList = "member_id, created_at")
     }
 
 )

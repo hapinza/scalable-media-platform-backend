@@ -12,7 +12,8 @@ public enum ErrorCode {
     INVALID_WINDOW,
     LIKE_NOT_FOUND,
     RATING_NOT_FOUND,
-    INVALID_RATING
+    INVALID_RATING,
+    RATE_LIMITED
 }
 
 

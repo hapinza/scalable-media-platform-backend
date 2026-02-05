@@ -51,11 +51,17 @@ public class WatchingProgressService {
 
 
     @Transactional(readOnly = true)
-    public List<ProgressItemResponse> list(Long memberId){
-        return progressRepository.findAllByMemberIdOrderByUpdatedAtDesc(memberId)
-                    .stream()
-                    .map(p -> new ProgressItemResponse(p.getMovieId(), p.getProgressSeconds(), p.getUpdatedAt()))
-                    .toList();
+    public List<ProgressItemResponse> list(Long memberId, int page, int size){
+        // return progressRepository.findAllByMemberIdOrderByUpdatedAtDesc(memberId)
+        //             .stream()
+        //             .map(p -> new ProgressItemResponse(p.getMovieId(), p.getProgressSeconds(), p.getUpdatedAt()))
+        //             .toList();
+
+        if(size <= 0 || size > 50) size = 20;
+        if(page < 0) page = 0;
+        return progessRepository.findItems(memberId, PageRequest.of(page, size));
+
+
     }
 
 
