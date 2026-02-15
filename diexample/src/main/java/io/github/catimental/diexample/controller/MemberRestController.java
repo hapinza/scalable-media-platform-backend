@@ -60,7 +60,7 @@ public class MemberRestController {
         String ip = ClientIpUtil.getClientIp(http);
         String key = "rl:register:%s".formatted(ip);
 
-        rateLimitService.checkOrThrow(key, 5, Duration.ofMinutes(10);
+        rateLimitService.checkOrThrow(key, 5, Duration.ofMinutes(10));
 
 
         return ResponseEntity.ok(memberService.register(req));
@@ -109,7 +109,7 @@ public class MemberRestController {
     @GetMapping("/me")
     public ResponseEntity<MemberResponse> me(Authentication authentication){
         Long memberId = (Long) authentication.getPrincipal();
-        return ResponseEntity.of(memberService.getMe(memberId));
+        return ResponseEntity.ok(memberService.getMe(memberId));
     }
 
 

@@ -1,10 +1,8 @@
 package io.github.catimental.diexample.security;
 
-import io.jsonwebtoekn.*;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
-import io.jsonwebtoken.securityKeys;
 import io.jsonwebtoken.security.Keys;
 
 import org.springframework.beans.factory.annotation.Value;

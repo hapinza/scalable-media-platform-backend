@@ -1,5 +1,6 @@
 package io.github.catimental.diexample.Service;
 
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,17 +23,17 @@ public class WatchingProgressService {
     private final MemberRepository memberRepository;
 
 
-    public WatchingProgressRepository(WatchingProgressRepository progressRepository, MemberRepository memberRepository){
+    public WatchingProgressService(WatchingProgressRepository progressRepository, MemberRepository memberRepository){
         this.progressRepository = progressRepository;
         this.memberRepository = memberRepository;
     }
 
     public void upsert(Long memberId, Long movieId, Integer progressSeconds){
         if(progressSeconds == null || progressSeconds < 0){
-            throw new ApiException(ErrorCode.INVALID_PROGRESS, "prograssseconds should be more than 0");
+            throw new ApiException(ErrorCode. INVALID_PROGESS, "prograssseconds should be more than 0");
         }
 
-        var existing = progressRepository.findByMemberIdAndMovieId(memberId, movieId)
+        var existing = progressRepository.findByMemberIdAndMovieId(memberId, movieId);
 
         
         if(existing.isPresent()){
@@ -45,27 +46,29 @@ public class WatchingProgressService {
 
 
         
-        progressRepository.save(new WatchingProgress(memberId, movieId, progressSeconds));
+        progressRepository.save(new WatchingProgress(member, movieId, progressSeconds));
 
     }
 
 
     @Transactional(readOnly = true)
-    public List<ProgressItemResponse> list(Long memberId, int page, int size){
+    public List<ProgressItemResponse> list(Long memberId){
         // return progressRepository.findAllByMemberIdOrderByUpdatedAtDesc(memberId)
         //             .stream()
         //             .map(p -> new ProgressItemResponse(p.getMovieId(), p.getProgressSeconds(), p.getUpdatedAt()))
         //             .toList();
 
-        if(size <= 0 || size > 50) size = 20;
-        if(page < 0) page = 0;
-        return progessRepository.findItems(memberId, PageRequest.of(page, size));
+        // if(size <= 0 || size > 50) size = 20;
+        // if(page < 0) page = 0;
+        // return progressRepository.findItems(memberId);
+
+        return progressRepository.findItems(memberId);
 
 
     }
 
 
-}
+
 
 
     public void remove(Long memberId, Long movieId){
@@ -74,3 +77,5 @@ public class WatchingProgressService {
         
         progressRepository.delete(p);
     }
+
+}

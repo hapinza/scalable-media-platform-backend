@@ -10,6 +10,10 @@ import io.github.catimental.diexample.domain.watchlist.Watchlist;
 import io.github.catimental.diexample.domain.Member;
 import io.github.catimental.diexample.DTO.*;
 
+import java.util.List;
+
+
+@Service
 public class WatchlistService {
     
     private final WatchlistRepository watchlistRepository;

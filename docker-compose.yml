@@ -3,7 +3,7 @@ services:
   app: 
     build:
       context: .
-      dockerfile: diexample/Dockerfile
+      dockerfile: Dockerfile
     ports:
       - "8080:8080"
     environment:
@@ -11,8 +11,13 @@ services:
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: dltjdgh1234
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
+
+
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
     depends_on:
       - db
+      - redis
 
 
   
@@ -55,10 +60,17 @@ services:
 
     
 
+  redis:
+      image: redis:7-alpine
+      ports:
+        - "6379:6379"
+      volumes:
+        - redis_data:/data
+
 volumes:
   mysql_data:
   kafka_data:
-
+  redis_data:
 
 
  

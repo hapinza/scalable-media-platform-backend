@@ -71,7 +71,7 @@ public class RefreshTokenService {
     public void revoke(String rawRefreshToken){
         String hash = TokenHashUtil.sha256Hex(rawRefreshToken);
         RefreshToken rt = refreshTokenRepository.findByTokenHash(hash)
-                            .orElseThrow(() -> ApiException(ErrorCode.REFRESH_TOKEN_INVALID, "refresh token is noot valid"));
+                            .orElseThrow(() -> new ApiException(ErrorCode.REFRESH_TOKEN_INVALID, "refresh token is not valid"));
     
 
         rt.revoke();

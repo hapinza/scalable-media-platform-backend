@@ -10,12 +10,13 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import io.github.catimental.diexample.DTO.progress.ProgressItemResponse;
 
 
 import io.github.catimental.diexample.domain.progress.*;
 
 
-public class WatchingProgressRepository extends JpaRepository<WatchingProgress, Long>{
+public interface WatchingProgressRepository extends JpaRepository<WatchingProgress, Long>{
 
 
 
@@ -26,10 +27,10 @@ public class WatchingProgressRepository extends JpaRepository<WatchingProgress, 
     @Query("""
         select new com.yourpkg.progress.progressItemResponse(p.movieId, p.progressSeconds, p.updatedAt)
         from WatchingProgress p
-        where p.memberId = :memberId
+        where p.member.id = :memberId
         order by p.updatedAt desc
         """)
-        Page<ProgressItemResponse> findItems(@Param("memberId") Long memberId, Pageable pageable);
+        List<ProgressItemResponse> findItems(@Param("memberId") Long memberId);
         
 
 

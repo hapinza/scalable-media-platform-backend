@@ -5,7 +5,7 @@ import io.github.catimental.diexample.domain.Auth.*;;
 
 import java.util.Optional;
 
-public class RefreshTokenRepository extends JpaRepository<RefreshToken, Long>{
+public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long>{
     Optional<RefreshToken> findByTokenHash(String tokenHash);
 
 }

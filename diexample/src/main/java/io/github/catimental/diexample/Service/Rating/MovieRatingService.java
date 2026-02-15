@@ -13,6 +13,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import io.github.catimental.diexample.DTO.rating.RatingUpsertResponse;
 
+import io.github.catimental.diexample.exception.ErrorCode;
+
 
 @Transactional
 @Service
@@ -30,7 +32,7 @@ public class MovieRatingService {
 
     public void upsert(Long memberId, Long movieId, int score){
         if(score < 1 || score > 10) {
-            throw new ApiException(Errorcode.INVALID_RATING, "score should be between 1 to 10");
+            throw new ApiException(ErrorCode.INVALID_RATING, "score should be between 1 to 10");
         }
 
         var existing = movieRatingRepository.findByMemberIdAndMovieId(memberId, movieId);
@@ -59,10 +61,10 @@ public class MovieRatingService {
 
 
     @Transactional(readOnly = true)
-    public Page<RatingUpsertResponse> list(Long memberId, Page pageable){
+    public Page<RatingUpsertResponse> list(Long memberId, Pageable pageable){
         
         return movieRatingRepository.findAllByMemberIdOrderByUpdatedAtDesc(memberId, pageable)
-                                .map(p -> new RatingUpsertRequest(p.getMovieId(), p.getScore(), p.getUpdatedAt());
+                    .map(p -> new RatingUpsertResponse(p.getMovieId(), p.getScore(), p.getUpdatedAt()));
 
     }
 

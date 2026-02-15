@@ -11,7 +11,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/watchlist")
-public class MemberController {
+public class WatchlistController {
     
     private final WatchlistService watchlistService;
     
@@ -29,7 +29,7 @@ public class MemberController {
     }
     
     
-    @DelteMapping("/{movieId}")
+    @DeleteMapping("/{movieId}")
     public ResponseEntity<Void> remove(@PathVariable Long movieId, Authentication authentication){
         Long memberId = (Long) authentication.getPrincipal();
         watchlistService.remove(memberId, movieId);
@@ -38,12 +38,12 @@ public class MemberController {
     
     
     @GetMapping
-    public ResponseEntity<Page<WatchlistItemResponse>> list(Authentication authentication,
-        @RequestParam(defaultValue = "0") int page,
-        @RequestParam(defaultValue = "20") int size
+    public ResponseEntity<List<WatchlistItemResponse>> list(Authentication authentication
+        // @RequestParam(defaultValue = "0") int page,
+        // @RequestParam(defaultValue = "20") int size
     ){
          Long memberId = (Long) authentication.getPrincipal();
-         return ResponseEntity.ok(watchlistService.list(memberId, page, size));    
+         return ResponseEntity.ok(watchlistService.list(memberId));    
     }
     
     

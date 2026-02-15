@@ -77,8 +77,27 @@ public class AuthController {
 
     
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout(@Requestbody LogoutRequest req){
-        refreshTokenService.revoke(req.refreshToken());
+    public ResponseEntity<Void> logout(@Requestbody LogoutRequest req,
+        HttpServletRequest http
+    ){
+       
+        String ip = ClientIpUtil.getClientIp(http);
+        String userAgent = ua(http);
+        try{
+            // token revoke 
+            
+            Member member = refreshTokenService.validateAndGetMember(req.refreshToken());
+            refreshTokenService.revoke(req.refreshToken());
+
+            auditLogService.log(member.getId(), "LOUTOUT", true, null, ip, userAgent);
+
+        }catch(ApiException e){
+            auditLogService.log(null, "LOGOUT_FAIL", false, e.getErrorCode().name(), ip, userAgent);
+            throw e;
+        }
+
+
+
         return ResponseEntity.ok().build();
     }
 }

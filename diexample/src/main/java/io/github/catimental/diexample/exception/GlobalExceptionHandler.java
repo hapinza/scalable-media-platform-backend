@@ -24,7 +24,7 @@ public class GlobalExceptionHandler {
         if(e.getErrorCode() == ErrorCode.ALREADY_WACHLISTED){
             return ResponseEntity.status(409).body(body);
         }
-        if(e.getErrorCode() == ErrorCode.WATCHLIST_NOT_FOUND){{
+        if(e.getErrorCode() == ErrorCode.WATCHLIST_NOT_FOUND){
             return ResponseEntity.status(404).body(body);
         }
 

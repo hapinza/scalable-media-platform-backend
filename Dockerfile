@@ -1,18 +1,16 @@
 #1. build (JDK)
-FROM maven:3.8.4-openjdk-17-slim AS build
-
+FROM maven:3.9-eclipse-temurin-17 AS build
 WORKDIR /app
 
 #2. copy the source code
-COPY pom.xml .
-COPY src ./src
+COPY diexample/pom.xml .
+COPY diexample/src ./src
 
 #3. application build
 RUN mvn clean install -DskipTests
 
 #4 run(JDK 17)
-FROM openjdk:17-jdk-slim
-
+FROM eclipse-temurin:17-jre-jammy
 WORKDIR /app
 
 #5. copy the file built

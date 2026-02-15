@@ -6,7 +6,7 @@ import ch.qos.logback.core.subst.Token;
 import io.github.catimental.diexample.domain.Member;
 import io.github.catimental.diexample.exception.ErrorCode;
 import io.github.catimental.diexample.security.JwtProvider;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import io.github.catimental.diexample.Repository.MemberRepository;
 import io.github.catimental.diexample.DTO.MemberResponse;
 import io.github.catimental.diexample.DTO.MemberLoginRequest;
@@ -53,7 +53,7 @@ public class MemberService {
         member.setLoginId(req.loginId());
         member.setLoginPassword(passwordEncoder.encode(req.password()));
         member.assignUserRole();
-        member.setCreatedAt(LocalDateTime.now());
+        member.setCreatedAt();
 
         
         Member saved = memberRepository.save(member);
@@ -67,13 +67,13 @@ public class MemberService {
         Member member = memberRepository.findByLoginId(req.loginid())
                         .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND, "id no exist"));
         
-        if(!passwordEncoder.mathches(req.password(), member.getLoginPassword())){
+        if(!passwordEncoder.matches(req.password(), member.getLoginPassword())){
             throw new ApiException(ErrorCode.INVALID_PASSWORD, "incorrect password");
         }
 
         
 
-        String access = jwtProvider.createAccessToken(member.getId(), member.getRole().name());
+        String access = jwtProvider.createAccessToken(member.getId(), member.getRoleName());
         String refresh = refreshTokenService.issue(member);
 
         return new TokenPairResponse(access, refresh);
@@ -86,15 +86,15 @@ public class MemberService {
 
 
 
-    public void updateMember(Long memberId, MemberUpdateRequest req){
+    // public void updateMember(Long memberId, MemberUpdateRequest req){
         
 
-    }
+    // }
 
 
     @Transactional(readOnly = true)
     public MemberResponse getMe(Long memberId){
-        Member member = memberRepository.findByLoginId(memberId)
+        Member member = memberRepository.findById(memberId)
                     .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND, "no member exists"));
         
         return new MemberResponse(member.getId(), member.getLoginId(), member.getRoleName());

@@ -20,8 +20,20 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http, JwtProvider jwtProvider) throws Exception{
         http
+        .cors(Customizer.withDefaults())
         .csrf(csrf -> csrf.disable())
-        .cors(Costomizer.withDefault())
+        .headers(headers -> headers
+            .frameOptions(frame -> frame.deny())
+
+            .contentTypeOptions(cto -> {})
+
+            .referrerPolicy(rp -> rp.policy(
+                org.springframework.security.web.header.writers
+                   .ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER
+            ))
+
+            .contentSecurityPolicy(csp -> csp.policyDirectives("default-src 'self'"))
+        )
         .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(auth -> auth
             .requestMatchers("/members/register", "/members/login", "/auth/refresh", "/auth/logout",

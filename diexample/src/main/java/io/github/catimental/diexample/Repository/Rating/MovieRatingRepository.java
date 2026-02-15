@@ -12,6 +12,6 @@ public interface MovieRatingRepository extends JpaRepository<MovieRating, Long>{
 
     Optional<MovieRating> findByMemberIdAndMovieId(Long memberId, Long mvoieId);
     
-    Page<MovieRating> findAllByMemberIdOrderByUpdatedAtDesc(Long memberId, Page Pageable);
+    Page<MovieRating> findAllByMemberIdOrderByUpdatedAtDesc(Long memberId, Pageable Pageable);
     
 }

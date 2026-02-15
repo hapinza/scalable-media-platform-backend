@@ -1,10 +1,12 @@
 package io.github.catimental.diexample.domain;
+import jakarta.persistence.*;
+import java.time.LocalDateTime;
 
 
 @Entity
 public class Member {
     @Id 
-    @GneeratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
 
@@ -39,7 +41,7 @@ public class Member {
     }
 
     public Long getId(){
-        return this.Id;
+        return this.id;
     }
 
     public void setId(Long id){
@@ -65,6 +67,10 @@ public class Member {
         this.loginPassword = loginPassword;
     }
 
+
+    public void setCreatedAt(){
+        this.createdAt = LocalDateTime.now();
+    }
     
     // set the role when registering in service
     // when it comes to role, make the setter but
