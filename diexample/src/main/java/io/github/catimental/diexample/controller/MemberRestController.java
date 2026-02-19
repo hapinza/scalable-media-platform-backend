@@ -14,13 +14,14 @@ import io.github.catimental.diexample.DTO.MemberResponse;
 import io.github.catimental.diexample.DTO.refreshToken.TokenPairResponse;
 
 import org.springframework.security.core.Authentication;
+import io.github.catimental.diexample.DTO.MemberUpdateRequest;
 
 import io.github.catimental.diexample.Service.RateLimit.RateLimitService;
 import io.github.catimental.diexample.Service.audit.AuditLogService;
 // RateLimit
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Duration;
-import io.github.catimental.diexample.common.util.ClientIpUtil;
+//import io.github.catimental.diexample.common.util.ClientIpUtil;
 
 // member connection
 import io.github.catimental.diexample.domain.Member;
@@ -40,7 +41,7 @@ public class MemberRestController {
         String v = req.getHeader("User-Agent");
         return v == null ? null : v.substring(0, Math.min(200, v.length()));
     }
-
+    
     private final AuditLogService auditLogService;
 
     //dependency 
@@ -102,7 +103,8 @@ public class MemberRestController {
     public ResponseEntity<MemberResponse> updateMember(@RequestBody MemberUpdateRequest req, Authentication authentication){
         Long memberId = (Long) authentication.getPrincipal();
 
-        return ResponseEntity.ok(memberService.updateMember(memberId , req));
+        memberService.updateMember(memberId , req);
+        return ResponseEntity.ok().build();
 
     }
 

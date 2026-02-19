@@ -19,6 +19,11 @@ public class WatchlistService {
     private final WatchlistRepository watchlistRepository;
     private final MemberRepository memberRepository;
 
+
+    public WatchlistService(WatchlistRepository watchlistRepository , MemberRepository memberRepository){
+        this.watchlistRepository = watchlistRepository;
+        this.memberRepository = memberRepository;
+    }
     
 
 

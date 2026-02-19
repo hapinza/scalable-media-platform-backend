@@ -21,7 +21,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.lang.Exception;
 
-import io.github.catimental.diexample.DTO.trending.TrendingItemRequest;
 
 
 import lombok.extern.slf4j.Slf4j;
@@ -78,11 +77,13 @@ public class TrendingService {
 
         if(cachedJson != null){
             try{
-                TrendingPageCache cache = objectMapper.readValue(cachedJson, TrendingPageCache.class);
+                TrendingPageCache<TrendingItemResponse> cache = objectMapper.readValue(cachedJson, new TypeReference<TrendingPageCache<TrendingItemResponse>>() {
+                    
+                } );
 
-                Pageable pageable = PageRequest.of(cache.page(), cache.size());
+                Pageable pageable = PageRequest.of(cache.number(), cache.size());
 
-                return new PageImpl<>(cache.items(), pageable, cache.getTotalElements());
+                return new PageImpl<>(cache.items(), pageable, cache.totalElements());
             }catch(Exception e){
                 log.warn("Failed to reach cache for Key= {}", cacheKey, e);
             }

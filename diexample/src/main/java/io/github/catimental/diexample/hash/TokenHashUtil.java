@@ -3,7 +3,7 @@ package io.github.catimental.diexample.hash;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 
-import org.aspectj.bridge.Message;
+// import org.aspectj.bridge.Message;
 
 
 

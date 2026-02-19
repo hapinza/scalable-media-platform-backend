@@ -50,9 +50,13 @@ public class MovieLike {
         this.updatedAt = LocalDateTime.now();
     }
 
+    public void update(boolean like){
+        this.like = like;
+    }
+
     public Long getMovieId(){ return this.movieId; }
     public boolean isLike(){return this.like; }
-    public LocalDateTime getUpdatedAt(){return this.getUpdatedAt;}
+    public LocalDateTime getUpdatedAt(){return this.getUpdatedAt();}
 
 
 

@@ -1,7 +1,7 @@
 package io.github.catimental.diexample.Service.Rating;
 import org.springframework.transaction.annotation.Transactional;
 
-import io.github.catimental.diexample.DTO.rating.RatingUpsertRequest;
+
 import io.github.catimental.diexample.Repository.MemberRepository;
 import io.github.catimental.diexample.Repository.Rating.MovieRatingRepository;
 import io.github.catimental.diexample.domain.rating.MovieRating;

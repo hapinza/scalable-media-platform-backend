@@ -1,4 +1,6 @@
-import org.springframework.kafka.annotation.EnableKafka;
+package io.github.catimental.diexample.Service.Consumer;
+
+//import org.springframework.kafka.annotation.EnableKafka;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
 import io.github.catimental.diexample.DTO.trending.TrendingItemRequest;

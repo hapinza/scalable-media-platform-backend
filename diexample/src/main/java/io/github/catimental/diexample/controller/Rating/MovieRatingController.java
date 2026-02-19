@@ -8,6 +8,9 @@ import io.github.catimental.diexample.DTO.rating.RatingUpsertRequest;
 import io.github.catimental.diexample.Service.Rating.MovieRatingService;
 import io.github.catimental.diexample.DTO.rating.*;
 
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Page;
+
 @RestController
 @RequestMapping("/ratings")
 public class MovieRatingController {
@@ -40,7 +43,7 @@ public class MovieRatingController {
 
 
     @GetMapping
-    public ResponseEntity<Page<RatingUpsertResponse>> list(Page pageable, Authentication authentication){
+    public ResponseEntity<Page<RatingUpsertResponse>> list(Pageable pageable, Authentication authentication){
         Long memberId = (Long) authentication.getPrincipal();   
 
         return ResponseEntity.ok(movieRatingService.list(memberId, pageable));

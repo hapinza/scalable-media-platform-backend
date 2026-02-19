@@ -1,7 +1,7 @@
 package io.github.catimental.diexample.exception;
 
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.ExceptionHandler;
+// import org.springframework.http.ResponseEntity;
+// import org.springframework.web.bind.annotation.ExceptionHandler;
 
 public class ApiException extends RuntimeException {
     private final ErrorCode errorCode;

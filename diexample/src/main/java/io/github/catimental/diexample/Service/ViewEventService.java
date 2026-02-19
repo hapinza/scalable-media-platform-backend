@@ -1,5 +1,4 @@
 package io.github.catimental.diexample.Service;
-import java.time.LocalDateTime;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -8,11 +7,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import io.github.catimental.diexample.DTO.trending.TrendingItemRequest;
 import io.github.catimental.diexample.Repository.ViewEventRepository;
-import io.github.catimental.diexample.domain.analytics.ViewEvent;
-
 
 // kafka 
-import org.springframework.kafka.core.KafkaTemplate;
+// import org.springframework.kafka.core.KafkaTemplate;
 
 
 

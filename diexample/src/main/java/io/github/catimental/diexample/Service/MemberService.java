@@ -2,7 +2,7 @@ package io.github.catimental.diexample.Service;
 
 import org.springframework.stereotype.Service;
 
-import ch.qos.logback.core.subst.Token;
+
 import io.github.catimental.diexample.domain.Member;
 import io.github.catimental.diexample.exception.ErrorCode;
 import io.github.catimental.diexample.security.JwtProvider;
@@ -14,12 +14,13 @@ import io.github.catimental.diexample.DTO.MemberRegisterRequest;
 import io.github.catimental.diexample.exception.ApiException;
 // import io.github.catimental.diexample.config.SecurityBeansConfig;
 
-import java.time.LocalDateTime;
+
 
 import org.springframework.security.crypto.password.PasswordEncoder;
-import io.github.catimental.diexample.security.*;
-import io.github.catimental.diexample.Service.RefreshTokenService;
 import io.github.catimental.diexample.DTO.refreshToken.TokenPairResponse;
+
+import io.github.catimental.diexample.DTO.MemberUpdateRequest;
+
 
 @Service
 @Transactional
@@ -86,10 +87,14 @@ public class MemberService {
 
 
 
-    // public void updateMember(Long memberId, MemberUpdateRequest req){
-        
+    public void updateMember(Long memberId, MemberUpdateRequest req){
+            Member member = memberRepository.findByLoginId(req.loginId())
+                                        .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND, "Member does not exist"));
 
-    // }
+          
+                member.changeLoginId(req.loginId());
+                member.changeLoginPassword(passwordEncoder.encode(req.loginPassword()));
+    }
 
 
     @Transactional(readOnly = true)

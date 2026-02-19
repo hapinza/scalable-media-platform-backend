@@ -90,4 +90,12 @@ public class Member {
         return role.name();
     }
 
+    public void changeLoginId(String loginId){
+        this.loginId = loginId;
+    }
+
+    public void changeLoginPassword(String loginPassword){
+        this.loginPassword = loginPassword;
+    }
+
 }

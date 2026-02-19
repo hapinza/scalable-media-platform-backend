@@ -10,8 +10,11 @@ import io.github.catimental.diexample.Repository.Like.MovieLikeRepository;
 import io.github.catimental.diexample.exception.ApiException;
 import io.github.catimental.diexample.domain.Member;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import io.github.catimental.diexample.domain.like.MovieLike;
+
+
+import io.github.catimental.diexample.exception.ErrorCode;
 
 @Service
 @Transactional
@@ -40,7 +43,7 @@ public class MovieLikeService {
 
 
         
-        movieLikeRepository.save(new MovieLike(memberId, movieId, like));
+        movieLikeRepository.save(new MovieLike(member, movieId, like));
 
     }
 

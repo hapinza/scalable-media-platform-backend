@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import io.github.catimental.diexample.domain.Member;
 
-import org.springframework.cglib.core.Local;
+// import org.springframework.cglib.core.Local;
 
 
 @Entity

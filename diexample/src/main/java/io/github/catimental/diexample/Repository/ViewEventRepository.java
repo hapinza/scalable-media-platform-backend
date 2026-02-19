@@ -65,7 +65,7 @@ public interface ViewEventRepository extends JpaRepository<ViewEvent, Long>{
      count(distinct v.id) as viewCount,
      count(distinct case when ml.like = true then ml.id end) as likeCount,
      (count(distinct v.id)
-     + (count(distinct case when ml.like true then ml.id end) * :likeWeight)) as score
+     + (count(distinct case when ml.like = true then ml.id end) * :likeWeight)) as score
      from ViewEvent v
      left join MovieLike ml
             on ml.movieId = v.movieId

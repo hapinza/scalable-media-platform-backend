@@ -6,13 +6,15 @@ import java.time.LocalDateTime;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import io.github.catimental.diexample.DTO.refreshToken.TokenPairResponse;
+
 import io.github.catimental.diexample.Repository.RefreshTokenRepository;
 import io.github.catimental.diexample.domain.Member;
 import io.github.catimental.diexample.hash.TokenHashUtil;
 import io.github.catimental.diexample.domain.Auth.*;
 import io.github.catimental.diexample.exception.ApiException;
 import io.github.catimental.diexample.exception.ErrorCode;
+import java.util.Base64;
+
 
 @Service
 @Transactional

@@ -7,8 +7,11 @@ import org.springframework.web.bind.annotation.*;
 import io.github.catimental.diexample.DTO.Like.LikeUpsertRequest;
 import io.github.catimental.diexample.DTO.Like.MovieLikeItemResponse;
 import io.github.catimental.diexample.Service.Like.MovieLikeService;
-import io.github.catimental.diexample.domain.like.MovieLike;
+// import io.github.catimental.diexample.domain.like.MovieLike;
+import org.springframework.data.domain.Pageable;
 
+
+import org.springframework.data.domain.Page;
 
 @RestController
 @RequestMapping("/likes")
@@ -44,7 +47,7 @@ public class MovieLikeController {
 
     @GetMapping
     public ResponseEntity<Page<MovieLikeItemResponse>> list(
-        Page pageable, Authentication authentication
+        Pageable pageable, Authentication authentication
     ) {
         Long memberId = (Long) authentication.getPrincipal();
 

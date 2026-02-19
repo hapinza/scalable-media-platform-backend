@@ -4,6 +4,7 @@ import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import io.github.catimental.diexample.Repository.Audit.AuditLogRepository;
+import io.github.catimental.diexample.domain.audit.*;
 
 @Service
 public abstract class AuditLogService {
