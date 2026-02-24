@@ -1,34 +1,104 @@
-# NetflixClone
-I’m building a Netflix-style web app as a personal project to practice full-stack development.  
-It uses React for the front-end and connects to the TMDB API to show live movie and TV data.  
-Later, I plan to connect it with a Spring Boot backend for login and data storage.
+# Streaming Platform Backend Architecture Simulation
+
+## Overview
+
+This project simulates a production-style backend system for a streaming platform.
+
+The goal is not only to replicate features, but to design and test backend architecture principles such as authentication, rate limiting, database performance optimization, and system reliability under load.
+
+### The system focuses on:
+
+- Object-oriented layered architecture
+- JWT-based stateless authentication
+- Redis-backed rate limiting
+- Transactional database design
+- CI automation and containerized deployment
+
+---
+
+## System Architecture
+
+```
+Client (React)
+    |
+    v
+Spring Security Filter Chain
+    |
+    v
+JWT Authentication Filter
+    |
+    v
+Rate Limiting Filter (Redis)
+    |
+    v
+Controller Layer
+    |
+    v
+Service Layer
+    |
+    v
+JPA / MySQL
+```
 
 
-# Overview
-The main goal is to recreate the browsing experience of a streaming platform.  
-Right now, I’m focusing on learning how APIs work and how to structure reusable React components.  
-Once I get the backend working, I’ll start integrating both sides together.
+### Architecture Design
 
-# What is used
-FrontEnd: React, Tailwind CSS, Axios, React Router  
-BackEnd: Spring Boot, MySQL, JPA
-API: The Movie database API
-Tools: VS Code, Git
+- Rate limiting is implemented at the filter layer to intercept abusive traffic before reaching business logic.
+- Stateless JWT authentication removes server-side session dependency.
+- Layered architecture separates concerns between controller, service, and persistence layers.
 
-# Features / Prgress
-Netflix-style browsing interface (React + Tailwind CSS)
-Watchlist and favorite collections 
-Spring Boot backend for member registration and login (prsent)
+---
 
-1. Ser Spring Boot project structure and tested enviorment (completed)
-2. Built basic member registration and login endpoints using REST API (completed)
-3. Connecting backend logic with database via JPA/MySQL, implementing JWT based authentication (progress)
-4. Integrate the API with React frontend using Axios (planned)
-5. UI design with Tailwind CSS (planned)
-   
-# Authentication & Security 
-1. JWT based authentication with Spring security
-2. hashing the password with BCryptPasswordEncoder
-3. Stateless authentication with access token
-4. Authentication principal extraction for user specific operations
-5. Securing APIs with Spring security filter chain
+## Authentication & Security Design
+
+- JWT-based stateless authentication
+- Access token validation via custom filter
+- BCrypt password hashing
+- Authentication principal extraction for user-scoped operations
+- Secured API endpoints using Spring Security filter chain
+
+---
+
+## Rate Limiting (In Progress)
+
+### Design Goal
+
+To protect the system from excessive traffic and abuse while maintaining predictable performance under concurrent load.
+
+### Implementation Strategy
+
+- Redis-backed request counter
+- Atomic increment operations for concurrency safety
+- Client IP extraction via `X-Forwarded-For`
+- Filtering before controller execution
+
+### Future Enhancements
+
+- Sliding window algorithm
+- Token bucket implementation
+- Monitoring request metrics
+
+---
+
+## Database Design
+
+- Relational schema modeling using MySQL
+- Transactional operations for consistency
+- SQL optimization and N+1 problem exploration (planned)
+
+---
+
+## DevOps & Tooling
+
+- Dockerized multi-container setup (App + MySQL + Redis)
+- GitHub Actions CI pipeline for automated builds and tests
+- Unit and integration testing using JUnit
+
+---
+
+## Performance Experiments (Planned)
+
+- Connection pool monitoring
+- Intentional N+1 query simulation and resolution
+- Cache introduction and latency comparison
+- JWT expiration strategy testing
