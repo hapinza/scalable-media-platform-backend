@@ -78,6 +78,20 @@ To protect the system from excessive traffic and abuse while maintaining predict
 - Token bucket implementation
 - Monitoring request metrics
 
+### Rate Limiting Performance
+
+Implemented a Redis-backed rate limiter (60 req/min) using an atomic Lua script to ensure correct TTL behavior under concurrency.
+
+Load tested with k6 (5 VUs, 10s) against `/movies/trending`.
+
+Results:
+- Total requests: 2,591
+- HTTP 200: 60
+- HTTP 429 (throttled): 2,531
+- p95 latency: 32.67ms
+
+Under concurrent load, the system maintained sub-33ms p95 response time while predictably throttling excess requests with HTTP 429.
+
 ---
 
 ## Database Design
