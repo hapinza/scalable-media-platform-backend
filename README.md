@@ -49,7 +49,7 @@ JPA / MySQL
 
 ---
 
-## Authentication & Security Design
+### Authentication & Security Design
 
 - JWT-based stateless authentication
 - Access token validation via custom filter
@@ -59,7 +59,36 @@ JPA / MySQL
 
 ---
 
-## Rate Limiting (In Progress)
+## Refresh Token Rotation
+
+To improve authentication security, the system implements **refresh token rotation with conditional database updates**.
+
+Key characteristics:
+
+- Refresh tokens are stored as **SHA-256 hashes** in the database
+- Each user maintains **a single refresh token record**
+- Every refresh request **rotates the token**
+- Previous refresh tokens are **immediately invalidated**
+
+Token rotation is implemented using a conditional update:
+
+UPDATE refresh_token
+SET token_hash = :newHash,
+    expires_at = :newExp
+WHERE member_id = :memberId
+AND token_hash = :oldHash
+
+This ensures that **only one refresh request can succeed**, preventing replay attacks and concurrent token reuse.
+
+Security benefits:
+
+- Prevents refresh token replay attacks
+- Ensures single active refresh token per user
+- Protects against concurrent refresh race conditions
+
+Prevented concurrent refresh replay using conditional database rotation.
+
+## Rate Limiting
 
 ### Design Goal
 
