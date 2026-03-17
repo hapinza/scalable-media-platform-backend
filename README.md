@@ -1,10 +1,30 @@
-# Streaming Platform Backend Architecture Simulation
+![Java](https://img.shields.io/badge/Java-17-blue)
+![Spring Boot](https://img.shields.io/badge/SpringBoot-3-green)
+![Redis](https://img.shields.io/badge/Redis-Cache-red)
+![Docker](https://img.shields.io/badge/Docker-Container-blue)
+![MySQL](https://img.shields.io/badge/MySQL-Database-blue)
+![CI](https://img.shields.io/badge/GitHubActions-CI-black)
+
+
+# Scalable Backend System with Redis Rate Limiting & Load Testing
+
+## Key Achievements
+
+- Built a scalable backend system using Spring Boot, Redis, and MySQL
+- Implemented Redis-based rate limiting using atomic Lua scripts
+- Achieved p95 latency of 32ms under concurrent load (k6 testing)
+- Designed stateless JWT authentication with refresh token rotation
+- Containerized system with Docker and automated CI using GitHub Actions
+
+---
+
+## Why this project matters
+This project focuses on understanding how backend systems behave under real-world traffic and designing solutions for scalability, performance, and reliability.
+
+---
 
 ## Overview
-
-This project simulates a production-style backend system for a streaming platform.
-
-The goal is not only to replicate features, but to design and test backend architecture principles such as authentication, rate limiting, database performance optimization, and system reliability under load.
+This project simulates a production-style backend system for a streaming platform, focusing on scalability, performance, and real-world system behavior under load.
 
 ### The system focuses on:
 
@@ -136,6 +156,15 @@ Under concurrent load, the system maintained sub-33ms p95 response time while pr
 - Dockerized multi-container setup (App + MySQL + Redis)
 - GitHub Actions CI pipeline for automated builds and tests
 - Unit and integration testing using JUnit
+
+---
+
+## What I Learned
+
+- How backend systems behave under concurrent load
+- Importance of rate limiting and traffic control
+- Trade-offs between caching and database consistency
+- Designing systems for scalability and reliability
 
 ---
 
