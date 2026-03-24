@@ -1,8 +1,10 @@
-package io.github.catimental.diexample.Service.Consumer;
+package io.github.catimental.diexample.Consumer.Kafka;
 
 //import org.springframework.kafka.annotation.EnableKafka;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
+
+import io.github.catimental.diexample.DTO.trending.MovieViewedEvent;
 import io.github.catimental.diexample.DTO.trending.TrendingItemRequest;
 import io.github.catimental.diexample.Repository.ViewEventRepository;
 import io.github.catimental.diexample.domain.analytics.ViewEvent;
@@ -21,13 +23,13 @@ public class TrendingConsumer {
 
 
     // with kafkaTemplate.send
-    @KafkaListener(topics = "trending-topic", groupId = "test-group")
+    //@KafkaListener(topics = "trending-topic", groupId = "test-group")
     // if the group differs, consumer processes the same request at the same time
     // but when it is the same, only will take one task. 
-    public void listen(TrendingItemRequest event){
+    public void listen(MovieViewedEvent event){
         log.info("Received trending data: {}" , event);
-
-        viewEventRepository.save(new ViewEvent(event.memberId(), event.movieId()));
+        
+        viewEventRepository.save(new ViewEvent(event.eventId(), event.memberId(), event.movieId()));
     }
 
 

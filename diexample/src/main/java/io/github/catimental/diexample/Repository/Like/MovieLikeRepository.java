@@ -13,7 +13,7 @@ public interface MovieLikeRepository extends JpaRepository<MovieLike, Long>{
     Optional<MovieLike> findByMemberIdAndMovieId(Long memberId, Long movieId);
 
     // show the likes in DB (data for front)
-    Page<MovieLike> findAllByMemebrIdAndLikeTrueOrderByUpdatedAtDesc(Long memberId, Pageable pageable);
+    Page<MovieLike> findAllByMember_IdAndLikeTrueOrderByUpdatedAtDesc(Long memberId, Pageable pageable);
 
 
 }

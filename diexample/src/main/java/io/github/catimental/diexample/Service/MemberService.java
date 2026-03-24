@@ -65,7 +65,7 @@ public class MemberService {
 
 
     public TokenPairResponse login(MemberLoginRequest req){
-        Member member = memberRepository.findByLoginId(req.loginid())
+        Member member = memberRepository.findByLoginId(req.loginId())
                         .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND, "id no exist"));
         
         if(!passwordEncoder.matches(req.password(), member.getLoginPassword())){
@@ -75,7 +75,7 @@ public class MemberService {
         
 
         String access = jwtProvider.createAccessToken(member.getId(), member.getRoleName());
-        String refresh = refreshTokenService.issue(member);
+        String refresh = refreshTokenService.issueAndStoreRefresh(member.getId());
 
         return new TokenPairResponse(access, refresh);
 

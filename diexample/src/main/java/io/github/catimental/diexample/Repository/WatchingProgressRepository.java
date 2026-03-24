@@ -23,7 +23,7 @@ public interface WatchingProgressRepository extends JpaRepository<WatchingProgre
 
 
     @Query("""
-        select new com.yourpkg.progress.progressItemResponse(p.movieId, p.progressSeconds, p.updatedAt)
+        select new io.github.catimental.diexample.DTO.progress.ProgressItemResponse(p.movieId, p.progressSeconds, p.updatedAt)
         from WatchingProgress p
         where p.member.id = :memberId
         order by p.updatedAt desc

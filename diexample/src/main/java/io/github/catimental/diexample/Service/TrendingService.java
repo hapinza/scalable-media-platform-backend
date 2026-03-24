@@ -123,14 +123,10 @@ public class TrendingService {
         
         // what about change the DTO to trendingpagecache
         // Page, pageof
-
-
-
-
-
     }
 
 
+    
     public Page<TrendingScoreItemResponse> trendingWithScore(int windowDays, int page, int size){
         if(windowDays<= 0 || windowDays > 30){
             throw new ApiException(ErrorCode.INVALID_WINDOW, "windowdays must be between 1 to 30");
@@ -198,3 +194,10 @@ public class TrendingService {
 
 
 }
+
+
+
+
+
+
+

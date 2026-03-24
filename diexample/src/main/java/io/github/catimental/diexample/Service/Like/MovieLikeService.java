@@ -58,7 +58,7 @@ public class MovieLikeService {
 
     @Transactional(readOnly = true)
     public Page<MovieLikeItemResponse> likeLists(Long memberId, Pageable pageable){
-        return movieLikeRepository.findAllByMemebrIdAndLikeTrueOrderByUpdatedAtDesc(memberId, pageable)
+        return movieLikeRepository.findAllByMember_IdAndLikeTrueOrderByUpdatedAtDesc(memberId, pageable)
                             .map(p -> new MovieLikeItemResponse(p.getMovieId(), p.isLike(), p.getUpdatedAt()));
     } 
 

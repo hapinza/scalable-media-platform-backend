@@ -15,8 +15,6 @@ import java.time.LocalDateTime;
             "member_id", "movie_id"
         }),
     indexes = @Index(name = "idx_progress_member_updated", columnList = "member_id,updated_at")
-
-
 )
 
 
@@ -41,7 +39,7 @@ private Long movieId;
 @Column(name = "progress_second", nullable= false)
 private Integer progressSeconds;
 
-@Column(name = "upated_at", nullable = false)
+@Column(name = "updated_at", nullable = false)
 private LocalDateTime updatedAt;
 
 protected WatchingProgress(){};

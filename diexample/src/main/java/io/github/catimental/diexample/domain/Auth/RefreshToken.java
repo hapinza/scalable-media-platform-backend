@@ -22,7 +22,7 @@ public class RefreshToken {
 
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "member_id", nullable = false)
+    @JoinColumn(name = "member_id", nullable = false , unique = true)
     private Member member;
 
 
@@ -45,6 +45,7 @@ public class RefreshToken {
         this.member = member;
         this.tokenHash = tokenHash;
         this.expiresAt = expiresAt;
+        this.createdAt = LocalDateTime.now();
     }
 
     public boolean isExpired(){
@@ -59,11 +60,21 @@ public class RefreshToken {
         this.revokedAt = LocalDateTime.now();
     }
 
+    public void clearRevoked(){
+        this.revokedAt = null;
+    }
+
     public Member getMember(){return this.member;}
     public String getTokenHash(){return this.tokenHash;}
     public LocalDateTime getExpireAt(){return this.expiresAt;}
 
-
+    public void setTokenHash(String newHash){
+        this.tokenHash = newHash;
+    }
+    
+    public void setExpiresAt(LocalDateTime exp){
+        this.expiresAt = exp;
+    }
 
 
 

@@ -21,7 +21,7 @@ public class MovieRatingController {
         this.movieRatingService = movieRatingService;
     }
 
-    @PutMapping("/{movieId")
+    @PutMapping("/{movieId}")
     public ResponseEntity<Void> upsert(@PathVariable Long movieId, @RequestBody RatingUpsertRequest req, Authentication authentication){
         Long memberId = (Long) authentication.getPrincipal();
 

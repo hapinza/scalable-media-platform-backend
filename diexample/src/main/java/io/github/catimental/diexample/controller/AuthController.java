@@ -55,24 +55,22 @@ public class AuthController {
         String ip = ClientIpUtil.getClientIp(http);
         String userAgent = ua(http);
 
-        Member member = refreshTokenService.validateAndGetMember(req.refreshToken());
+       Member member = refreshTokenService.validateAndGetMember(req.refreshToken());
         
         if(member == null){
             throw new ApiException(ErrorCode.MEMBER_NOT_FOUND, "Member does not exist");
         }
 
-
-
         try{
-            refreshTokenService.rotate(req.refreshToken());
+            TokenPairResponse rt = refreshTokenService.refresh(req.refreshToken());
 
-            String newFresh = refreshTokenService.issue(member);
+            // String newFresh = refreshTokenService.issue(member);
 
-            String newAccess = jwtProvider.createAccessToken(member.getId(), member.getRoleName());
+            // String newAccess = jwtProvider.createAccessToken(member.getId(), member.getRoleName());
 
             auditLogService.log(member.getId(), "REFRESH", true, null, ip, userAgent);
 
-            return ResponseEntity.ok(new TokenPairResponse(newAccess, newFresh));
+            return ResponseEntity.ok(new TokenPairResponse(rt.accessToken(), rt.refreshToken()));
 
         }catch(ApiException e){
             auditLogService.log(member.getId(), "REFRESH_FAIL", false, e.getErrorCode().name(), ip, userAgent);
@@ -95,7 +93,7 @@ public class AuthController {
             // token revoke 
             
             Member member = refreshTokenService.validateAndGetMember(req.refreshToken());
-            refreshTokenService.revoke(req.refreshToken());
+            refreshTokenService.logout(member.getId());
 
             auditLogService.log(member.getId(), "LOUTOUT", true, null, ip, userAgent);
 

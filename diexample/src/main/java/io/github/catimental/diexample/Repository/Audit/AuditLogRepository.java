@@ -5,4 +5,8 @@ import io.github.catimental.diexample.domain.audit.AuditLog;
 
 
 public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
+
+
+
+
 }

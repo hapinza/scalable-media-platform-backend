@@ -7,7 +7,14 @@ import java.time.LocalDateTime;
     @Index(name = "idx_view_movie_created", columnList = "movie_id,created_at"),
     @Index(name = "idx_view_member_created", columnList = "member_id,created_at")
 
-})
+},
+uniqueConstraints = {
+    @UniqueConstraint(name = "uk_view_event_event_id", columnNames = "event_id")
+}
+
+)
+
+
 
 // in ViewEvent, time(created_at) is the most significant variable. 
 // compared to the other DB such as watchingprogress(relationship) 
@@ -16,6 +23,9 @@ public class ViewEvent {
     @Id 
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "event_id", nullable = false, length = 100)
+    private String eventId;
 
 
     @Column(name = "member_id")
@@ -29,7 +39,8 @@ public class ViewEvent {
 
     protected ViewEvent(){}
 
-    public ViewEvent(Long memberId, Long movieId){
+    public ViewEvent(String eventId, Long memberId, Long movieId){
+        this.eventId = eventId;
         this.memberId = memberId;
         this.movieId = movieId;
         this.createdAt = LocalDateTime.now();

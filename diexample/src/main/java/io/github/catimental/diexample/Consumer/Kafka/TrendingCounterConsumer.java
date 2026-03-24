@@ -1,4 +1,4 @@
-package io.github.catimental.diexample.Service.Consumer;
+package io.github.catimental.diexample.Consumer.Kafka;
 
 import org.springframework.stereotype.Service;
 
@@ -22,7 +22,7 @@ public class TrendingCounterConsumer {
     }
 
 
-    @KafkaListener(topics = "trending-topic", groupId = "trending-counter-group")
+   // @KafkaListener(topics = "trending-topic", groupId = "trending-counter-group")
     public void listen(TrendingItemRequest event){
         //cacheKey
         String key = "trending:count:movie" + event.movieId();

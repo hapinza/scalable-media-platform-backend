@@ -1,4 +1,4 @@
-package io.github.catimental.diexample.Service.RateLimit;
+ package io.github.catimental.diexample.Service.RateLimit;
 
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
@@ -23,6 +23,8 @@ public class RateLimitService {
     // utilize the cache(redis) for incrementing key in duration(window)
     // key is http request key
     public void checkOrThrow(String key, int limit, Duration window){
+      
+        // automicity
         Long count = redis.opsForValue().increment(key);
 
         if(count != null && count == 1){
@@ -33,6 +35,7 @@ public class RateLimitService {
             throw new ApiException(ErrorCode.RATE_LIMITED, "Too many request");
         }
     }
+
 
 
 

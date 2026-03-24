@@ -1,24 +1,28 @@
 <configuration>
 
-<appender name = "JSON_FILE" class = "ch.qos.logback.core.FileAppender">
-<file>/var/log/myapp/application.json</file>
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss} %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
 
-<encoder>
-    <pattern>
-    {
-        "timestamp" : "%data{yyyy-MM-dd'T'HH:mm:ss.SSSZ",
-        "level": "%level",
-        "thread": "%thread",
-        "logger": "%logger",
-        "message": "%message",
-        "exception": "%exception"
-    }
-    </pattern>
-</encoder>
-</appender>
+    <appender name="JSON_FILE" class="ch.qos.logback.core.FileAppender">
+        <file>/var/log/myapp/application.json</file>
+        <encoder>
+            <pattern>{
+                "timestamp":"%date{yyyy-MM-dd'T'HH:mm:ss.SSSZ}",
+                "level":"%level",
+                "thread":"%thread",
+                "logger":"%logger",
+                "message":"%message",
+                "exception":"%exception"
+            }%n</pattern>
+        </encoder>
+    </appender>
 
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="JSON_FILE"/>
+    </root>
 
-<root level = "INFO">
-    <appender-ref ref = "JSON_FILE"/>
-</root>
 </configuration>

@@ -85,12 +85,12 @@ public class MemberRestController {
             TokenPairResponse tokens = memberService.login(req);
 
 
-            auditLogService.log(null, "LOGIN_SUCCESS", false, "loginId:" + req.loginid(), ip, userAgent);
+            auditLogService.log(null, "LOGIN_SUCCESS", false, "loginId:" + req.loginId(), ip, userAgent);
             return ResponseEntity.ok(tokens);
 
 
         }catch(ApiException e){
-            auditLogService.log(null, "LOGIN_FAIL", false, "loginId=" + req.loginid() + ", reaseon=" + e.getErrorCode(), ip, userAgent);
+            auditLogService.log(null, "LOGIN_FAIL", false, "loginId=" + req.loginId() + ", reaseon=" + e.getErrorCode(), ip, userAgent);
             throw e;
         }
 

@@ -28,7 +28,7 @@ public interface WatchlistRepository extends JpaRepository<Watchlist, Long> {
 
     @Query(
         """
-        select new com.yourpkg.watchlist.WatchlistItemResponse(w.movieId, w.createdAt)
+        select new io.github.catimental.diexample.DTO.WatchlistItemResponse(w.movieId, w.createdAt)
         from Watchlist w
         where w.member.id = :memberId
         order by w.createdAt desc        

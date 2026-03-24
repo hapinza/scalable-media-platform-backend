@@ -1,6 +1,7 @@
 version: '3.8'
 services:
   app: 
+    restart: unless-stopped
     build:
       context: .
       dockerfile: Dockerfile
@@ -15,12 +16,14 @@ services:
 
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
+
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092 
     depends_on:
       - db
       - redis
 
 
-  
+
   db:
     image: mysql:8.0
     environment:
@@ -28,7 +31,7 @@ services:
       MYSQL_DATABASE: mydb
 
     ports:
-      - "3306:3306"
+      - "3307:3306"
 
     volumes:
       - mysql_data:/var/lib/mysql
@@ -39,24 +42,35 @@ services:
   # 2. Docker connection: Container <> Container
   # 3. Local: Host <-> Host
 
+  zookeeper:
+      image: confluentinc/cp-zookeeper:7.6.1
+      container_name: zookeeper
+      environment:
+        ZOOKEEPER_CLIENT_PORT: 2181
+        ZOOKEEPER_TICK_TIME: 2000
+      ports:
+       - "2181:2181"
+
+
   kafka:
     image: confluentinc/cp-kafka:7.6.1
     container_name: kafka
+    depends_on:
+    - zookeeper
     ports:
-      - "9092:9092"
+    - "9092:9092"     
+    - "29092:29092"  
     environment:
-      KAFKA_NODE_ID: 1
-      KAFKA_PROCESS_ROLES: broker,controller
-      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka:9093"
-      KAFKA_LISTENERS: "PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093"
-      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://localhost:9092"
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT"
-      KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: "zookeeper:2181"
+
+      KAFKA_LISTENERS: "PLAINTEXT://0.0.0.0:9092,PLAINTEXT_INTERNAL://0.0.0.0:29092"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://kafka:29092"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT"
+      KAFKA_INTER_BROKER_LISTENER_NAME: "PLAINTEXT_INTERNAL"
+
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
-
-    volumes:
-      - kafka_data:/bitnami/kafka
 
     
 
