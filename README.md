@@ -14,6 +14,8 @@
 - Implemented Redis-based rate limiting using atomic Lua scripts
 - Achieved p95 latency of 32ms under concurrent load (k6 testing)
 - Designed stateless JWT authentication with refresh token rotation
+- Implemented idempotent processing and atomic operations to eliminate race conditions and duplicate event issues in concurrent environments
+- Built a failure recovery workflow with bulk retry and manual replay endpoints, achieving 70% recovery rate (7/10) while preventing infinite retries through bounded retry policies and dead-event handling
 - Containerized system with Docker and automated CI using GitHub Actions
 
 ---
@@ -107,6 +109,34 @@ Security benefits:
 - Protects against concurrent refresh race conditions
 
 Prevented concurrent refresh replay using conditional database rotation.
+
+
+## Event Processing & Failure Recovery
+
+To ensure reliability in asynchronous event processing, the system implements idempotent handling and a bounded retry recovery workflow.
+
+### Idempotent Event Processing
+
+- Ensured safe reprocessing under at-least-once delivery semantics
+- Designed idempotent operations to prevent duplicate writes and inconsistent state
+- Eliminated race conditions in concurrent environments through atomic processing logic
+
+### Failure Recovery Workflow
+
+- Failed events are persisted in a dedicated `failed_events` table
+- Each event tracks retry count and processing status (`FAILED`, `RECOVERED`, `DEAD`)
+- Implemented manual replay endpoint:
+  - `POST /admin/failed-events/{id}/retry`
+- Implemented bulk retry endpoint:
+  - `POST /admin/failed-events/retry?limit=N`
+
+### Recovery Results
+
+- Simulated 10 failed events in the event pipeline
+- Recovered **7 events (70%)** through controlled retries
+- Remaining **3 events were marked as DEAD** after exceeding retry thresholds
+- Prevented infinite retry loops through bounded retry policies
+
 
 ## Rate Limiting
 
