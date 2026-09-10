@@ -6,17 +6,24 @@
 ![CI](https://img.shields.io/badge/GitHubActions-CI-black)
 
 
-# Fault-Tolerant Backend System with Redis Streams, Rate Limiting & Load Testing
+# Scalable Media Platform Backend
 
-## Key Achievements
+A production-style Spring Boot backend built to explore
+event-driven processing, failure recovery, concurrency, and scalability.
 
-- Built a fault-tolerant event-driven backend system using Redis Streams, sustaining 15,000+ requests with 0% failure and zero data loss during simulated database outages.
-- Implemented the Outbox Pattern to ensure consistency between database transactions and event streams, successfully recovering 1,000+ pending events without data loss.
-- Built an event-driven Redis read-model aggregation pipeline, serving movie statistics from Redis Hashes through idempotent consumers.
-- Implemented idempotent processing and atomic operations to eliminate race conditions and duplicate event issues in concurrent environments.
-- Implemented Redis-based rate limiting using atomic Lua scripts.
-- Achieved p95 latency of 32ms under concurrent load (k6 testing).
----
+The system combines transactional MySQL writes, the Outbox Pattern,
+Redis Streams, idempotent consumers, Redis-backed read models,
+rate limiting, and load testing with k6.
+
+## Key Results
+
+| Experiment | Result |
+|---|---|
+| Database outage recovery | 15,031 requests, 0% HTTP failure, ~7.3ms p95 |
+| Transactional Outbox recovery | 991/991 committed events recovered from `PENDING → SENT` |
+| Rate limiting | 2,591 requests, 2,531 correctly throttled, 32.67ms p95 |
+| Failed-event recovery | 7/10 recovered, 3 transitioned to `DEAD` |
+| Read-model architecture | Redis Streams → idempotent consumer → Redis Hash aggregation |
 
 ## Why this project matters
 This project focuses on understanding how backend systems behave under real-world traffic and designing solutions for scalability, performance, and reliability.
