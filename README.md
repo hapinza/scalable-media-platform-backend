@@ -20,7 +20,7 @@ rate limiting, and load testing with k6.
 | Experiment | Result |
 |---|---|
 | Database outage recovery | 15,031 requests, 0% HTTP failure, ~7.3ms p95 |
-| Transactional Outbox recovery | 991/991 committed events recovered from `PENDING → SENT` |
+| Transactional Outbox recovery | 1,000 requests under 50-VU load; 991 committed, and all 991 recovered from `PENDING → SENT` |
 | Rate limiting | 2,591 requests, 2,531 correctly throttled, 32.67ms p95 |
 | Failed-event recovery | 7/10 recovered, 3 transitioned to `DEAD` |
 | Read-model architecture | Redis Streams → idempotent consumer → Redis Hash aggregation |
@@ -129,12 +129,17 @@ To validate reliability, I simulated a failure scenario by temporarily disabling
 
 **Results:**
 
-- Processed 1,000+ concurrent requests with no data loss
-- Ensured all pending outbox events were eventually published
-- Verified transition from `PENDING → SENT` state for all events
-- Prevented inconsistencies between database state and event streams
+- Sent 1,000 requests under 50-VU concurrent load
+- 991 requests completed successfully; 9 timed out due to HikariCP connection-pool saturation
+- Verified exactly 991 `movie_like` rows and 991 corresponding `PENDING` outbox events
+- Re-enabled the Outbox Poller and recovered all 991 committed events
+- Verified complete `PENDING → SENT` transition with no loss among committed transactions
 
-This experiment demonstrates how the Outbox Pattern guarantees eventual consistency between transactional data and asynchronous event delivery.
+  
+The 9 failed requests never completed their database transaction because the
+10-connection HikariCP pool was saturated under peak load. This was an
+infrastructure capacity limit rather than an Outbox consistency failure:
+every successfully committed request produced a corresponding Outbox event.
 
 
 ### Redis Read Model Aggregation
