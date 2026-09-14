@@ -1,0 +1,746 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="description" content="A MySQL outage exposed a Redis Streams recovery bug: zero stream lag still left 97 events unacknowledged.">
+  <title>MySQL outage — event recovery report</title>
+  <style>
+    :root {
+      --paper: #f6f6f6;
+      --surface: #fff;
+      --ink: #202020;
+      --muted: #616161;
+      --line: #d3d3d3;
+      --failure: #a82e25;
+      --mono: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-padding-top: 1rem; }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--paper);
+      font: 1rem/1.65 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    main {
+      max-width: 66rem;
+      margin: auto;
+      padding: 2.5rem 1.5rem 3rem;
+    }
+
+    h1, h2, h3, p, dl, dd, ol { margin: 0; }
+
+    h1 {
+      max-width: 49ch;
+      margin-bottom: 2rem;
+      font-size: clamp(1.4rem, 3.1vw, 1.9rem);
+      font-weight: 550;
+      line-height: 1.45;
+      letter-spacing: -.025em;
+    }
+
+    h2 { font-size: 1.125rem; font-weight: 650; }
+    h3 { font-size: 1.125rem; font-weight: 650; line-height: 1.4; }
+    p + p { margin-top: .75rem; }
+
+    code, output, .reading dd, .evidence dd, .step-number, .stage-label {
+      font-family: var(--mono);
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -.025em;
+    }
+
+    code { font-size: .94em; overflow-wrap: anywhere; }
+    a { color: inherit; text-underline-offset: .25em; }
+    a:hover { text-decoration-thickness: .13em; }
+    :focus-visible { outline: 2px solid var(--ink); outline-offset: 4px; }
+    [hidden] { display: none !important; }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    .section-heading {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: .25rem 1rem;
+      margin-bottom: .875rem;
+    }
+
+    .section-heading p, .note {
+      color: var(--muted);
+      font-size: .875rem;
+    }
+
+    .navigator {
+      padding: 1rem 1.25rem .875rem;
+      background: var(--surface);
+      border: 1px solid var(--line);
+    }
+
+    .scrubber-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 1rem;
+      font-size: .875rem;
+    }
+
+    .scrubber-label output { white-space: nowrap; }
+    .rail { margin-inline: calc(100% / 16); }
+
+    input[type="range"] {
+      appearance: none;
+      -webkit-appearance: none;
+      display: block;
+      width: 100%;
+      min-height: 3rem;
+      margin: .375rem 0 0;
+      padding: 0;
+      color: var(--ink);
+      background: transparent;
+      cursor: ew-resize;
+    }
+
+    input[type="range"]::-webkit-slider-runnable-track {
+      height: 2px;
+      background: var(--line);
+    }
+
+    input[type="range"]::-moz-range-track {
+      height: 2px;
+      background: var(--line);
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 14px;
+      height: 24px;
+      margin-top: -11px;
+      border: 2px solid var(--ink);
+      border-radius: 2px;
+      background: var(--ink);
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 10px;
+      height: 20px;
+      border: 2px solid var(--ink);
+      border-radius: 2px;
+      background: var(--ink);
+    }
+
+    .timeline[data-failure="true"] input[type="range"]::-webkit-slider-thumb {
+      border-color: var(--failure);
+      background: var(--failure);
+    }
+
+    .timeline[data-failure="true"] input[type="range"]::-moz-range-thumb {
+      border-color: var(--failure);
+      background: var(--failure);
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(8, minmax(0, 1fr));
+      padding: 0;
+      list-style: none;
+    }
+
+    .steps a {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 3rem;
+      padding: .25rem .125rem;
+      gap: .25rem;
+      text-align: center;
+      text-decoration: none;
+      color: var(--muted);
+      border-bottom: 2px solid transparent;
+    }
+
+    .steps a:hover { background: var(--paper); color: var(--ink); }
+    .step-number { font-size: .875rem; }
+    .step-name { font-size: .8125rem; line-height: 1.4; }
+
+    .steps a[aria-current="step"] {
+      color: var(--ink);
+      border-bottom-color: var(--ink);
+    }
+
+    .steps a.pivot { color: var(--failure); }
+    .steps a.pivot[aria-current="step"] { border-bottom-color: var(--failure); }
+    .navigator .note { margin-top: .875rem; }
+
+    .stage {
+      margin-top: 1rem;
+      border: 1px solid var(--line);
+      background: var(--surface);
+      scroll-margin-top: 1rem;
+    }
+
+    .enhanced .stage { margin-top: 0; border-top: 0; }
+
+    .readings {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 5.5rem), 1fr));
+      border-bottom: 1px solid var(--line);
+    }
+
+    .reading { min-width: 0; padding: 1.125rem 1.5rem; }
+    .reading + .reading { border-left: 1px solid var(--line); }
+
+    .reading dt {
+      min-height: 3rem;
+      font-size: .875rem;
+      line-height: 1.45;
+      color: var(--muted);
+    }
+
+    .reading dd {
+      min-height: 1.3em;
+      margin-top: .375rem;
+      font-size: clamp(1.55rem, 4.7vw, 3.25rem);
+      line-height: 1.3;
+      white-space: nowrap;
+    }
+
+    .reading dd.trail {
+      font-size: clamp(.875rem, 1.6vw, 1rem);
+      line-height: 1.7;
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+
+    .observation { padding: 1.5rem; }
+    .enhanced .observation { min-height: 19rem; }
+    .stage-label { color: var(--muted); font-size: .8125rem; }
+
+    .observation h3 {
+      margin: .625rem 0 .875rem;
+      font-size: clamp(1.25rem, 3vw, 1.75rem);
+      letter-spacing: -.025em;
+    }
+
+    .observation > p:not(.stage-label) { max-width: 70ch; }
+
+    .evidence {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: .4rem 1rem;
+      margin-top: 1.125rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--line);
+      max-width: 40rem;
+      font-size: .875rem;
+    }
+
+    .evidence dt { color: var(--muted); }
+    .evidence dd { overflow-wrap: anywhere; }
+
+    .equation {
+      margin-top: 1.125rem;
+      font-family: var(--mono);
+      font-size: 1rem;
+    }
+
+    .stage.failure { border-inline-start: 3px solid var(--failure); }
+
+    .stage.failure .stage-label,
+    .stage.failure .stranded dd {
+      color: var(--failure);
+    }
+
+    .stage.pivot .observation h3 {
+      font-size: clamp(1.5rem, 3.6vw, 2.25rem);
+    }
+
+    .stage.pivot .stranded dd {
+      font-size: clamp(2rem, 6.4vw, 4.25rem);
+      font-weight: 600;
+    }
+
+    .stage.resolved { border-inline-start: 3px solid var(--ink); }
+
+    .failure-note, .closing-note {
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--line);
+      font-weight: 600;
+    }
+
+    .source-link {
+      display: inline-block;
+      margin-top: 1.125rem;
+      font-size: .875rem;
+    }
+
+    .support {
+      margin-top: 2.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--line);
+    }
+
+    .paths {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      margin-top: 1rem;
+    }
+
+    .paths article + article {
+      padding-left: 2rem;
+      border-left: 1px solid var(--line);
+    }
+
+    .paths h3 { margin-bottom: .625rem; }
+
+    .outbox {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      align-items: start;
+    }
+
+    .outbox p { margin-top: .625rem; }
+
+    .outbox .evidence {
+      margin: 0;
+      padding: 1rem 1.25rem;
+      border: 1px solid var(--line);
+      background: var(--surface);
+    }
+
+    .outbox .evidence dd { font-size: 1.5rem; }
+    .outbox .evidence dt { align-self: center; }
+    footer { margin-top: 2rem; font-size: .875rem; }
+
+    @media (max-width: 42rem) {
+      main { padding: 1.5rem 1rem 2rem; }
+      h1 { margin-bottom: 1.5rem; }
+      .navigator { padding: .875rem .375rem; }
+      .step-name { display: none; }
+      .steps a { justify-content: center; min-height: 3.25rem; }
+      .reading { padding: 1rem .625rem; }
+      .reading dt { min-height: 4.2rem; }
+      .observation { padding: 1.25rem 1rem; }
+      .enhanced .observation { min-height: 25rem; }
+      .paths, .outbox { grid-template-columns: 1fr; gap: 1.25rem; }
+
+      .paths article + article {
+        padding: 1.25rem 0 0;
+        border-left: 0;
+        border-top: 1px solid var(--line);
+      }
+
+      .evidence { gap: .5rem .75rem; }
+    }
+
+    @media print {
+      body { background: white; }
+      main { max-width: none; padding: 0; }
+      .navigator, .sr-only { display: none !important; }
+      .stage[hidden] { display: block !important; }
+
+      .enhanced .stage {
+        margin-top: 1rem;
+        border-top: 1px solid var(--line);
+      }
+
+      .enhanced .observation { min-height: 0; }
+      .stage, .support { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>I stopped MySQL during Redis-first ingestion and found a bug in my recovery code: <code>lag = 0</code> still left <code>97</code> events unacknowledged.</h1>
+
+    <section class="timeline" aria-labelledby="timeline-title">
+      <div class="section-heading">
+        <h2 id="timeline-title">Outage timeline</h2>
+        <p>Redis-first ingestion</p>
+      </div>
+
+      <div class="navigator">
+        <div id="scrubber" hidden>
+          <div class="scrubber-label">
+            <label for="stage-range">Drag through the observations</label>
+            <output id="stage-position" for="stage-range">6 / 8</output>
+          </div>
+          <div class="rail">
+            <input
+              id="stage-range"
+              type="range"
+              min="1"
+              max="8"
+              step="1"
+              value="6"
+              aria-describedby="measurement-note keyboard-note"
+              aria-controls="observations">
+          </div>
+          <p id="keyboard-note" class="sr-only">Use the arrow keys to move between observations.</p>
+        </div>
+
+        <nav aria-label="Outage stages">
+          <ol class="steps">
+            <li><a href="#stage-1" aria-label="Stage 1: Baseline"><span class="step-number">1</span><span class="step-name">Baseline</span></a></li>
+            <li><a href="#stage-2" aria-label="Stage 2: MySQL stopped"><span class="step-number">2</span><span class="step-name">DB stopped</span></a></li>
+            <li><a href="#stage-3" aria-label="Stage 3: Burst accepted and buffered"><span class="step-number">3</span><span class="step-name">Buffered</span></a></li>
+            <li><a href="#stage-4" aria-label="Stage 4: MySQL restored"><span class="step-number">4</span><span class="step-name">Restored</span></a></li>
+            <li><a href="#stage-5" aria-label="Stage 5: Backlog draining"><span class="step-number">5</span><span class="step-name">Draining</span></a></li>
+            <li><a href="#stage-6" class="pivot" aria-label="Stage 6: Zero lag, 97 still pending"><span class="step-number">6</span><span class="step-name">Lag zero</span></a></li>
+            <li><a href="#stage-7" aria-label="Stage 7: Recovery lookup bug"><span class="step-number">7</span><span class="step-name">Root cause</span></a></li>
+            <li><a href="#stage-8" aria-label="Stage 8: Recovery fixed"><span class="step-number">8</span><span class="step-name">Fixed</span></a></li>
+          </ol>
+        </nav>
+
+        <p id="measurement-note" class="note">Blank fields have no supplied measurement for that observation. Stage spacing does not represent elapsed time.</p>
+      </div>
+
+      <div id="observations">
+        <article class="stage" id="stage-1" aria-labelledby="title-1">
+          <dl class="readings">
+            <div class="reading">
+              <dt>Events accepted</dt>
+              <dd><span class="sr-only">Not measured</span></dd>
+            </div>
+            <div class="reading">
+              <dt>Stream lag</dt>
+              <dd><span class="sr-only">Not measured</span></dd>
+            </div>
+            <div class="reading">
+              <dt>Pending<br> (unacknowledged)</dt>
+              <dd><span class="sr-only">Not measured</span></dd>
+            </div>
+          </dl>
+          <div class="observation">
+            <p class="stage-label">STAGE 1 / BASELINE</p>
+            <h3 id="title-1">All services were running.</h3>
+            <p>The application, Redis, and MySQL were up before the failure injection.</p>
+            <dl class="evidence">
+              <dt>Application</dt><dd>running</dd>
+              <dt>Redis</dt><dd>running</dd>
+              <dt>MySQL</dt><dd>running</dd>
+            </dl>
+          </div>
+        </article>
+
+        <article class="stage" id="stage-2" aria-labelledby="title-2">
+          <dl class="readings">
+            <div class="reading">
+              <dt>Events accepted</dt>
+              <dd><span class="sr-only">Not measured</span></dd>
+            </div>
+            <div class="reading">
+              <dt>Stream lag</dt>
+              <dd><span class="sr-only">Not measured</span></dd>
+            </div>
+            <div class="reading">
+              <dt>Pending<br> (unacknowledged)</dt>
+              <dd><span class="sr-only">Not measured</span></dd>
+            </div>
+          </dl>
+          <div class="observation">
+            <p class="stage-label">STAGE 2 / FAILURE INJECTED</p>
+            <h3 id="title-2">I stopped the MySQL container.</h3>
+            <p>The application and Redis kept running. The downstream database was unavailable while ingestion remained up.</p>
+            <dl class="evidence">
+              <dt>Application</dt><dd>running</dd>
+              <dt>Redis</dt><dd>running</dd>
+              <dt>MySQL</dt><dd>stopped</dd>
+            </dl>
+          </div>
+        </article>
+
+        <article class="stage" id="stage-3" aria-labelledby="title-3">
+          <dl class="readings">
+            <div class="reading">
+              <dt>Events accepted</dt><dd>9,657</dd>
+            </div>
+            <div class="reading">
+              <dt>Stream lag</dt><dd>9,615</dd>
+            </div>
+            <div class="reading">
+              <dt>Pending<br> (unacknowledged)</dt><dd>42</dd>
+            </div>
+          </dl>
+          <div class="observation">
+            <p class="stage-label">STAGE 3 / BURST ACCEPTED AND BUFFERED</p>
+            <h3 id="title-3">The burst was accepted, and every event was still accounted for.</h3>
+            <p>The Redis-first path accepted <code>9,657</code> events while MySQL was stopped. HTTP success established acceptance; it did not establish downstream persistence, so I inspected the consumer group directly.</p>
+            <p>The <code>42</code> pending entries had been delivered to a consumer but were unacknowledged, because the database write behind them could not complete. The rest were still waiting in the stream.</p>
+            <p class="equation"><code>42 pending + 9,615 lag = 9,657 total</code></p>
+            <dl class="evidence">
+              <dt>HTTP failures</dt><dd>0</dd>
+            </dl>
+          </div>
+        </article>
+
+        <article class="stage" id="stage-4" aria-labelledby="title-4">
+          <dl class="readings">
+            <div class="reading">
+              <dt>Events accepted</dt>
+              <dd><span class="sr-only">Not measured</span></dd>
+            </div>
+            <div class="reading">
+              <dt>Stream lag</dt>
+              <dd><span class="sr-only">Not measured</span></dd>
+            </div>
+            <div class="reading">
+              <dt>Pending<br> (unacknowledged)</dt>
+              <dd><span class="sr-only">Not measured</span></dd>
+            </div>
+          </dl>
+          <div class="observation">
+            <p class="stage-label">STAGE 4 / DATABASE RESTORED</p>
+            <h3 id="title-4">MySQL was available again.</h3>
+            <p>I restarted MySQL while the application and Redis had stayed up throughout. The consumer resumed reading from where it had stopped.</p>
+          </div>
+        </article>
+
+        <article class="stage" id="stage-5" aria-labelledby="title-5">
+          <dl class="readings">
+            <div class="reading">
+              <dt>Events accepted</dt>
+              <dd><span class="sr-only">Not measured</span></dd>
+            </div>
+            <div class="reading">
+              <dt>Stream lag</dt>
+              <dd class="trail">9,615 → 9,495 → 8,975 → 7,835 → 6,325 → 5,105 → 705 → 0</dd>
+            </div>
+            <div class="reading">
+              <dt>Pending<br> (unacknowledged)</dt>
+              <dd><span class="sr-only">Not measured</span></dd>
+            </div>
+          </dl>
+          <div class="observation">
+            <p class="stage-label">STAGE 5 / BACKLOG DRAINING</p>
+            <h3 id="title-5">Undelivered entries drained to zero.</h3>
+            <p>Each successive inspection of the consumer group showed lag falling as the backlog was delivered and persisted. Every entry in the stream was eventually handed to a consumer.</p>
+            <p>Delivery is not completion. What the lag counter measured was how much had been handed over, not how much had finished.</p>
+          </div>
+        </article>
+
+        <article class="stage failure pivot" id="stage-6" aria-labelledby="title-6">
+          <dl class="readings">
+            <div class="reading">
+              <dt>Events accepted</dt>
+              <dd><span class="sr-only">Not measured</span></dd>
+            </div>
+            <div class="reading">
+              <dt>Stream lag</dt><dd>0</dd>
+            </div>
+            <div class="reading stranded">
+              <dt>Pending<br> (unacknowledged)</dt><dd>97</dd>
+            </div>
+          </dl>
+          <div class="observation">
+            <p class="stage-label">STAGE 6 / RECOVERY INCOMPLETE</p>
+            <h3 id="title-6">Lag reached zero.<br> Recovery was incomplete.</h3>
+            <p>The undelivered backlog was empty, but <code>97</code> delivered events were still unacknowledged, and the recovery scheduler was not picking them up. Stopping at the lag metric would have hidden the remaining work.</p>
+            <p class="failure-note">An empty lag counter was not evidence that every event had completed.</p>
+          </div>
+        </article>
+
+        <article class="stage failure" id="stage-7" aria-labelledby="title-7">
+          <dl class="readings">
+            <div class="reading">
+              <dt>Events accepted</dt>
+              <dd><span class="sr-only">Not measured</span></dd>
+            </div>
+            <div class="reading">
+              <dt>Stream lag</dt><dd>0</dd>
+            </div>
+            <div class="reading stranded">
+              <dt>Pending<br> (unacknowledged)</dt><dd>97</dd>
+            </div>
+          </dl>
+          <div class="observation">
+            <p class="stage-label">STAGE 7 / ROOT CAUSE</p>
+            <h3 id="title-7">My recovery lookup excluded the owner.</h3>
+            <p>The scheduler queried pending entries scoped to <code>recovery-consumer</code>. The <code>97</code> entries still belonged to <code>consumer-1</code>, so the lookup returned <code>0</code>. Redis had preserved every message correctly; my recovery worker could not see them.</p>
+            <dl class="evidence">
+              <dt>Lookup scope</dt><dd>recovery-consumer</dd>
+              <dt>Actual owner</dt><dd>consumer-1</dd>
+              <dt>Lookup result</dt><dd>0</dd>
+            </dl>
+          </div>
+        </article>
+
+        <article class="stage resolved" id="stage-8" aria-labelledby="title-8">
+          <dl class="readings">
+            <div class="reading">
+              <dt>Events accepted</dt>
+              <dd><span class="sr-only">Not measured</span></dd>
+            </div>
+            <div class="reading">
+              <dt>Stream lag</dt><dd>0</dd>
+            </div>
+            <div class="reading">
+              <dt>Pending<br> (unacknowledged)</dt><dd>0</dd>
+            </div>
+          </dl>
+          <div class="observation">
+            <p class="stage-label">STAGE 8 / FIX VERIFIED</p>
+            <h3 id="title-8">Recovery could see the whole group's work.</h3>
+            <p>I changed the scheduler to scan pending entries across the entire consumer group and use <code>XCLAIM</code> to reclaim stale ones. The recovery consumer became the claim target rather than the lookup scope.</p>
+            <p>Pending fell <code>97 → 37 → 0</code>. All <code>9,657</code> accepted events were persisted.</p>
+            <dl class="evidence">
+              <dt>Pending scan</dt><dd>group-wide</dd>
+              <dt>Ownership recovery</dt><dd>XCLAIM</dd>
+            </dl>
+            <p class="closing-note">Recovery was complete only when both counters read zero.</p>
+            <a class="source-link" href="https://github.com/hapinza/scalable-media-platform-backend">Read the recovery scheduler ↗</a>
+          </div>
+        </article>
+      </div>
+
+      <p id="announcement" class="sr-only" aria-live="polite" aria-atomic="true"></p>
+    </section>
+
+    <section class="support" aria-labelledby="paths-title">
+      <h2 id="paths-title">Why both write paths exist</h2>
+      <div class="paths">
+        <article>
+          <h3>Transactional Outbox</h3>
+          <p>The business update and its outbox event commit in the same MySQL transaction. The publisher then forwards the event to Redis Streams.</p>
+          <p>This path protects consistency between the database write and event publication. Accepting the write requires MySQL.</p>
+        </article>
+        <article>
+          <h3>Redis-first ingestion</h3>
+          <p>View events enter Redis Streams before downstream database persistence.</p>
+          <p>This path lets ingestion continue while MySQL is unavailable, provided Redis remains available. It is the path exercised in the outage timeline above.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="support outbox" aria-labelledby="outbox-title">
+      <div>
+        <h2 id="outbox-title">Outbox consistency result</h2>
+        <p>In a separate Outbox test, every committed event was recovered.</p>
+      </div>
+      <dl class="evidence">
+        <dt>Committed</dt><dd>991</dd>
+        <dt>Recovered</dt><dd>991/991</dd>
+      </dl>
+    </section>
+
+    <footer>
+      <a href="https://github.com/hapinza/scalable-media-platform-backend">Source repository ↗</a>
+    </footer>
+  </main>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const timeline = document.querySelector(".timeline");
+      const range = document.getElementById("stage-range");
+      const stages = Array.from(
+        document.querySelectorAll("#observations > .stage")
+      );
+      const links = Array.from(document.querySelectorAll(".steps a"));
+      const position = document.getElementById("stage-position");
+      const announcement = document.getElementById("announcement");
+
+      function selectStage(number, announce = false) {
+        const selected = stages.find(
+          stage => stage.id === "stage-" + number
+        );
+        if (!selected) return;
+
+        range.value = String(number);
+
+        stages.forEach(stage => {
+          stage.hidden = stage !== selected;
+        });
+
+        links.forEach(link => {
+          if (link.getAttribute("href") === "#" + selected.id) {
+            link.setAttribute("aria-current", "step");
+          } else {
+            link.removeAttribute("aria-current");
+          }
+        });
+
+        timeline.dataset.failure = String(
+          selected.classList.contains("failure")
+        );
+        position.value = number + " / " + stages.length;
+
+        const heading = selected.querySelector("h3")
+          .textContent.replace(/\s+/g, " ").trim();
+
+        const metrics = Array.from(
+          selected.querySelectorAll(".reading")
+        ).map(reading => {
+          const label = reading.querySelector("dt").textContent;
+          const value = reading.querySelector("dd").textContent.trim();
+          return label + ": " + value;
+        }).join(". ");
+
+        const description =
+          "Stage " + number + " of " + stages.length +
+          ". " + heading + ". " + metrics;
+
+        range.setAttribute("aria-valuetext", description);
+
+        if (announce) {
+          announcement.textContent = description;
+        }
+      }
+
+      range.addEventListener("input", () => {
+        selectStage(Number(range.value), true);
+      });
+
+      links.forEach(link => {
+        link.addEventListener("click", event => {
+          if (
+            event.ctrlKey || event.metaKey ||
+            event.shiftKey || event.altKey
+          ) return;
+
+          event.preventDefault();
+
+          selectStage(
+            Number(link.getAttribute("href").replace("#stage-", "")),
+            true
+          );
+        });
+      });
+
+      function stageFromHash() {
+        const match = location.hash.match(/^#stage-([1-8])$/);
+        return match ? Number(match[1]) : null;
+      }
+
+      window.addEventListener("hashchange", () => {
+        const number = stageFromHash();
+        if (number !== null) selectStage(number, true);
+      });
+
+      selectStage(stageFromHash() || Number(range.value));
+      timeline.classList.add("enhanced");
+      document.getElementById("scrubber").hidden = false;
+    })();
+  </script>
+</body>
+</html>
