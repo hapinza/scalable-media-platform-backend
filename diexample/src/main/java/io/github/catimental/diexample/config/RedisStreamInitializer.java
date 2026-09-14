@@ -17,13 +17,24 @@ public class RedisStreamInitializer {
 
     @PostConstruct
     public void init(){
-        String streamKey = "stream:movie:viewed";
-        String groupName = "movie-analytics-group"; //Consumer Group 1
+       
+       createStreamAndGroup("stream:movie:viewed", "movie-analytics-group");
+       createStreamAndGroup("stream:movie:liked", "movie-like-aggregation-group");
+        // String streamKey = "stream:movie:viewed";
+        // String groupName = "movie-analytics-group"; //Consumer Group 1
         // under one tream that conists of several things
         // it has various groups such as (how the information can be processed by group)
         // movie-analytics-group, movie-recommendation-group, movie-logging-group
 
 
+        
+
+
+
+    }
+
+
+    private void createStreamAndGroup(String streamKey, String groupName){
         try{
             if(Boolean.FALSE.equals(redisTemplate.hasKey(streamKey))){
                 redisTemplate.opsForStream().add(streamKey, Map.of("init", "true"));
@@ -33,9 +44,6 @@ public class RedisStreamInitializer {
 
 
         }catch(Exception ignored){}
-           
-
-
 
     }
 

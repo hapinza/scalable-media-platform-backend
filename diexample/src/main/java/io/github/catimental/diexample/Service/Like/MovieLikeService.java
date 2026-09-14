@@ -58,17 +58,33 @@ public class MovieLikeService {
 
     private void createOutbox(Long memberId, Long movieId, boolean like){
         try{
+            int delta = like ? 1 : -1;
+            String eventType = like ? "LIKE_CREATED" : "LIKE_REMOVED";
+
+
+
             Map<String, Object> payload = new HashMap<>();
             payload.put("memberId", memberId);
             payload.put("movieId", movieId);
             payload.put("type", "LIKE_CREATED");
+            payload.put("delta", delta);
 
+            /*
+            EventType:
+            
+            Redis Stream
+  ├─ LIKE_CREATED      → LikeAggregationConsumer
+  ├─ LIKE_REMOVED      → LikeAggregationConsumer
+  ├─ VIEW_CREATED      → ViewAggregationConsumer
+  ├─ RATING_UPDATED    → RatingAggregationConsumer
+  └─ COMMENT_CREATED   → CommentAggregationConsumer
+            */
             String payloadJson = objectMapper.writeValueAsString(payload);
 
             OutboxEvent outboxEvent = new OutboxEvent(
                 "LIKE",
                 memberId + ":" + movieId,
-                "LIKE_CREATED",
+                eventType,
                 payloadJson
             );
 

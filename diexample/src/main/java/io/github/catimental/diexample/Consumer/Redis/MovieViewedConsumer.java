@@ -50,13 +50,13 @@ public class MovieViewedConsumer {
         
         */
       @Scheduled(fixedDelay = 2000)
-        public void consumer() {
+        public void consumeNewMessages() { 
             List<MapRecord<String, Object, Object>> messages =
                 redisTemplate.opsForStream().read(
                     Consumer.from(GROUP, CONSUMER),
                     StreamReadOptions.empty().count(10).block(Duration.ofSeconds(1)),
                     //StreamOffset.create(STREAM, ReadOffset.lastConsumed())
-                    StreamOffset.create(STREAM, ReadOffset.from("0"))
+                    StreamOffset.create(STREAM, ReadOffset.lastConsumed())
                 );
     
             if (messages == null || messages.isEmpty()) {

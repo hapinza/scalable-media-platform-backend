@@ -18,6 +18,12 @@ import java.time.LocalDateTime;
 import jakarta.annotation.PostConstruct;
 @Slf4j
 @Component
+@ConditionalOnProperty(
+    name = "outbox.poller.enabled",
+    havingValue = "true",
+    matchIfMissing = true
+)
+
 @RequiredArgsConstructor
 public class OutboxPoller {
     
@@ -45,6 +51,9 @@ public class OutboxPoller {
                     new TypeReference<Map<String,String>>(){}
                 );
 
+                payload.put("eventId", event.getEventId());
+                payload.put("eventType", event.getEventType());
+                
                 redisPublisher.publish(STREAM, payload);
                 event.markSent();
             }catch(Exception e){

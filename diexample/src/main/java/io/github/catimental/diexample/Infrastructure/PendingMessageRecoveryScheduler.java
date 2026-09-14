@@ -40,7 +40,8 @@ public class PendingMessageRecoveryScheduler {
 
             PendingMessages pendingMessages = redisTemplate.opsForStream().pending(
                 STREAM,
-                Consumer.from(GROUP, RECOVERY_CONSUMER),
+               // Consumer.from(GROUP, RECOVERY_CONSUMER),
+               GROUP,
                 Range.unbounded(),
                 10L
             );

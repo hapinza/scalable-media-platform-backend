@@ -21,6 +21,8 @@ public interface MovieLikeRepository extends JpaRepository<MovieLike, Long>{
     Page<MovieLike> findAllByMember_IdAndLikeTrueOrderByUpdatedAtDesc(Long memberId, Pageable pageable);
 
 
+    long countByMovieIdAndLikeTrue(Long movieId);
+
     @Modifying
     @Query(value = """
             insert into movie_like (member_id, movie_id, is_like, updated_at)
