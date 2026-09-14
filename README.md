@@ -1,295 +1,706 @@
 ![Java](https://img.shields.io/badge/Java-17-blue)
 ![Spring Boot](https://img.shields.io/badge/SpringBoot-3-green)
-![Redis](https://img.shields.io/badge/Redis-Cache-red)
-![Docker](https://img.shields.io/badge/Docker-Container-blue)
+![Redis](https://img.shields.io/badge/Redis-Streams%20%26%20Caching-red)
 ![MySQL](https://img.shields.io/badge/MySQL-Database-blue)
+![Docker](https://img.shields.io/badge/Docker-Container-blue)
+![k6](https://img.shields.io/badge/k6-Load%20Testing-purple)
 ![CI](https://img.shields.io/badge/GitHubActions-CI-black)
-
 
 # Scalable Media Platform Backend
 
-A production-style Spring Boot backend built to explore
-event-driven processing, failure recovery, concurrency, and scalability.
+A Spring Boot backend focused on **event-driven processing, failure recovery, concurrency, and reliability under infrastructure failures**.
 
-The system combines transactional MySQL writes, the Outbox Pattern,
-Redis Streams, idempotent consumers, Redis-backed read models,
-rate limiting, and load testing with k6.
+The project uses controlled failure injection and load testing to validate how asynchronous workflows behave when publishers, consumers, or downstream dependencies fail.
+
+---
+
+## Quick Start
+
+### Prerequisites
+
+- Docker Desktop
+- Git
+- k6 *(optional — only required for load tests)*
+
+Clone the repository:
+
+```bash
+git clone https://github.com/hapinza/scalable-media-platform-backend.git
+cd scalable-media-platform-backend
+```
+
+Start the application:
+
+```bash
+docker compose up -d --build
+```
+
+Verify the containers:
+
+```bash
+docker compose ps
+```
+
+The core services should be running:
+
+```text
+app      Up
+db       Up (healthy)
+redis    Up
+```
+
+Test the asynchronous view-event ingestion path:
+
+```bash
+curl -i -X POST http://localhost:8080/analytics/views/1
+```
+
+Expected response:
+
+```text
+HTTP/1.1 202
+```
+
+Optional smoke test:
+
+```bash
+k6 run smoke-test.js
+```
+
+---
 
 ## Key Results
 
 | Experiment | Result |
 |---|---|
-| Database outage recovery | 15,031 requests, 0% HTTP failure, ~7.3ms p95 |
-| Transactional Outbox recovery | 1,000 requests under 50-VU load; 991 committed, and all 991 recovered from `PENDING → SENT` |
-| Rate limiting | 2,591 requests, 2,531 correctly throttled, 32.67ms p95 |
-| Failed-event recovery | 7/10 recovered, 3 transitioned to `DEAD` |
-| Read-model architecture | Redis Streams → idempotent consumer → Redis Hash aggregation |
-
-## Why this project matters
-This project focuses on understanding how backend systems behave under real-world traffic and designing solutions for scalability, performance, and reliability.
+| **Database outage recovery** | 9,657 events accepted with **0 HTTP failures** while MySQL was unavailable; Redis backlog fully recovered after restoration |
+| **Transactional Outbox recovery** | 1,000 requests under 50-VU load; 991 committed and **991/991 recovered from `PENDING → SENT`** |
+| **Rate limiting** | 2,591 requests; 2,531 correctly throttled with HTTP 429; **32.67ms p95** |
+| **Failed-event recovery** | 10 simulated processing failures; 7 recovered and 3 transitioned to `DEAD` |
 
 ---
 
-## Overview
-This project simulates a production-style backend system for a streaming platform, focusing on scalability, performance, and real-world system behavior under load.
+# Architecture
 
-### The system focuses on:
+The project uses two different asynchronous reliability strategies for two different failure modes.
 
-- Object-oriented layered architecture
-- JWT-based stateless authentication
-- Redis-backed rate limiting
-- Transactional database design
-- CI automation and containerized deployment
+## Transactional Outbox Path
 
----
-
-## System Architecture
-
-```
+```text
 Client
   ↓
-API
+Movie Like API
   ↓
 MySQL Transaction
- ├─ movie_like
- └─ outbox
-      ↓
- Outbox Poller
-      ↓
- Redis Stream
-      ↓
- Aggregation Consumer
-      ↓
- Redis Read Model
-      ↓
- Movie Stats API
-
+  ├─ movie_like
+  └─ outbox (PENDING)
+       ↓
+Outbox Poller
+       ↓
+Redis Stream
+       ↓
+Aggregation Consumer
+       ↓
+Redis Read Model
 ```
 
+The business update and its corresponding Outbox event are committed in the **same MySQL transaction**.
 
-### Architecture Design
-
-- Rate limiting is implemented at the filter layer to intercept abusive traffic before reaching business logic.
-- Stateless JWT authentication removes server-side session dependency.
-- Layered architecture separates concerns between controller, service, and persistence layers.
+This protects against the dual-write problem where database state commits successfully but event publication fails.
 
 ---
 
-### Authentication & Security Design
+## Redis-First Ingestion Path
 
-- JWT-based stateless authentication
-- Access token validation via custom filter
-- BCrypt password hashing
-- Authentication principal extraction for user-scoped operations
-- Secured API endpoints using Spring Security filter chain
+```text
+Client
+  ↓
+POST /analytics/views/{movieId}
+  ↓
+Redis Stream
+  ↓
+Consumer Group
+  ↓
+View Event Consumer
+  ↓
+MySQL
+```
+
+View-event ingestion is intentionally decoupled from immediate MySQL availability.
+
+The API first writes the event to Redis Streams, allowing request ingestion to remain available during a temporary database outage.
 
 ---
 
-## Refresh Token Rotation
+# Database Outage Recovery
 
-To improve authentication security, the system implements **refresh token rotation with conditional database updates**.
+To test downstream failure handling, I intentionally stopped only the MySQL container while keeping the application and Redis running.
 
-Key characteristics:
+```text
+Application    ✅ Running
+Redis          ✅ Running
+MySQL          ❌ Stopped
+```
 
-- Refresh tokens are stored as **SHA-256 hashes** in the database
-- Each user maintains **a single refresh token record**
-- Every refresh request **rotates the token**
-- Previous refresh tokens are **immediately invalidated**
+During the outage, the API continued accepting events into Redis Streams.
 
-Token rotation is implemented using a conditional update:
+### Outage Result
 
-UPDATE refresh_token
-SET token_hash = :newHash,
-    expires_at = :newExp
-WHERE member_id = :memberId
-AND token_hash = :oldHash
+The test session accepted:
 
-This ensures that **only one refresh request can succeed**, preventing replay attacks and concurrent token reuse.
+```text
+1 manual probe
++ 2,540 requests
++ 7,116 requests
+----------------
+9,657 total events
+```
 
-Security benefits:
+HTTP failures:
 
-- Prevents refresh token replay attacks
-- Ensures single active refresh token per user
-- Protects against concurrent refresh race conditions
+```text
+0
+```
 
-Prevented concurrent refresh replay using conditional database rotation.
+I then inspected the Redis consumer-group state directly.
 
+```text
+Pending: 42
+Lag:     9,615
+----------------
+Total:   9,657
+```
 
-## Event Processing & Failure Recovery
+All accepted events were still accounted for in Redis.
 
-To ensure reliability in asynchronous event processing, the system implements idempotent handling and a bounded retry recovery workflow.
+### Pending vs. Lag
 
-### Outbox Pattern & Consistency Guarantee
+`Pending` represents events that were already delivered to a consumer but had not been acknowledged.
 
-To ensure consistency between database state and event publication, the system implements the Outbox Pattern with a polling-based publisher.
+```text
+Redis
+  ↓
+consumer-1
+  ↓
+DB persistence attempted
+  ↓
+MySQL unavailable
+  ↓
+No ACK
+  ↓
+PENDING
+```
 
-Instead of directly publishing events after a database write, events are first stored in an `outbox` table within the same transaction. A scheduled poller then reads pending events and publishes them to Redis Streams.
+`Lag` represents events that remained in the stream and had not yet been delivered to the consumer.
 
-To validate reliability, I simulated a failure scenario by temporarily disabling the outbox poller while generating concurrent requests, allowing events to accumulate in the `PENDING` state. After re-enabling the poller, the system successfully published all pending events.
+This distinction made it possible to verify not only that requests succeeded, but also where every accepted event was waiting inside the asynchronous pipeline.
 
-**Results:**
+---
 
-- Sent 1,000 requests under 50-VU concurrent load
-- 991 requests completed successfully; 9 timed out due to HikariCP connection-pool saturation
-- Verified exactly 991 `movie_like` rows and 991 corresponding `PENDING` outbox events
-- Re-enabled the Outbox Poller and recovered all 991 committed events
-- Verified complete `PENDING → SENT` transition with no loss among committed transactions
+## Database Restoration
 
-  
-The 9 failed requests never completed their database transaction because the
-10-connection HikariCP pool was saturated under peak load. This was an
-infrastructure capacity limit rather than an Outbox consistency failure:
-every successfully committed request produced a corresponding Outbox event.
+After MySQL was restored, the consumer resumed processing.
 
+Consumer-group lag progressively drained:
 
-### Redis Read Model Aggregation
+```text
+9,615
+→ 9,495
+→ 8,975
+→ 7,835
+→ 6,325
+→ 5,105
+→ 705
+→ 0
+```
 
-To support fast read operations without repeatedly querying the database, the system implements an event-driven Redis read model using Redis Streams and asynchronous aggregation consumers.
+However, reaching `lag = 0` did **not** mean recovery was complete.
 
-After movie-like events are committed to the database, corresponding outbox events are published to Redis Streams. A dedicated aggregation consumer processes these events and updates Redis Hash-based movie statistics.
+Redis still reported:
+
+```text
+pending = 97
+```
+
+Those messages had already been delivered before the database recovered, but they had never been acknowledged.
+
+That exposed a bug in the recovery implementation.
+
+---
+
+## Recovery Bug Discovered During Failure Injection
+
+The original recovery scheduler queried pending messages only for:
+
+```text
+recovery-consumer
+```
+
+But the failed messages were still owned by:
+
+```text
+consumer-1
+```
+
+So the original logic effectively behaved like this:
+
+```text
+consumer-1
+  └─ 97 pending messages
+
+recovery-consumer lookup
+  └─ 0 messages found
+```
+
+Redis had preserved the events correctly, but the recovery worker could not discover them.
+
+### Fix
+
+The recovery scheduler was changed to inspect pending entries across the **entire consumer group**.
+
+```text
+Consumer Group
+      ↓
+Find stale pending messages
+      ↓
+XCLAIM
+      ↓
+recovery-consumer
+      ↓
+processMessage(...)
+      ↓
+Database persistence
+      ↓
+ACK
+```
+
+The recovery consumer is now used as the **claim target**, rather than as the pending-message lookup scope.
+
+After the fix:
+
+```text
+Pending
+97
+→ 37
+→ 0
+```
+
+Final consumer-group state:
+
+```text
+lag     = 0
+pending = 0
+```
+
+This validated the complete outage lifecycle:
+
+```text
+MySQL unavailable
+      ↓
+API remains available
+      ↓
+Redis buffers events
+      ↓
+failed processing remains unacknowledged
+      ↓
+MySQL restored
+      ↓
+new backlog drains
+      ↓
+stale pending entries reclaimed
+      ↓
+reprocessed
+      ↓
+ACK
+```
+
+---
+
+# Consumer Recovery Design
+
+Redis Streams keeps unacknowledged messages in the Pending Entries List, but abandoned messages are not automatically reassigned to another consumer.
+
+The application therefore implements an explicit recovery path.
+
+Normal processing:
+
+```text
+MovieViewedConsumer
+      ↓
+Read new event
+      ↓
+processMessage()
+      ↓
+DB success
+      ↓
+ACK
+```
+
+Failure path:
+
+```text
+Processing exception
+      ↓
+No ACK
+      ↓
+Pending Entry
+```
+
+Recovery path:
+
+```text
+PendingMessageRecoveryScheduler
+      ↓
+Group-wide pending lookup
+      ↓
+Find stale message
+      ↓
+XCLAIM
+      ↓
+recovery-consumer
+      ↓
+processMessage()
+      ↓
+ACK
+```
+
+Normal consumption and recovery reuse the same event-processing logic while keeping their orchestration responsibilities separate.
+
+---
+
+# Transactional Outbox
+
+The Outbox Pattern handles a different problem from the database-outage pipeline.
+
+Without an Outbox:
+
+```text
+Business DB commit succeeds
+        ↓
+Event publication fails
+        ↓
+Database and event stream diverge
+```
+
+Instead, the application writes:
+
+```text
+movie_like
++
+outbox
+```
+
+inside the same transaction.
+
+A scheduled Outbox Poller later publishes `PENDING` events to Redis Streams.
+
+---
+
+## Outbox Failure-Recovery Test
+
+The Outbox Poller was intentionally disabled while concurrent requests were generated.
+
+```text
+50 virtual users
+1,000 total requests
+```
+
+Results:
+
+```text
+1,000 requests
+      ↓
+991 committed
+9 connection-pool timeouts
+      ↓
+991 movie_like rows
+991 PENDING outbox events
+      ↓
+Poller restored
+      ↓
+991 SENT events
+```
+
+The test verified:
+
+- 991 successful business commits
+- exactly 991 corresponding Outbox records
+- all 991 events recovered from `PENDING → SENT`
+
+The 9 unsuccessful requests were caused by HikariCP connection-pool saturation under concurrent load.
+
+This was a capacity limitation rather than an Outbox consistency failure.
+
+The important invariant was:
+
+```text
+committed business transactions
+=
+corresponding Outbox events
+```
+
+---
+
+# Redis Read Model
+
+Movie-like events published through the Outbox pipeline are consumed asynchronously to maintain Redis-backed statistics.
+
+```text
+Movie Like API
+      ↓
+movie_like + outbox
+      ↓
+Outbox Poller
+      ↓
+Redis Stream
+      ↓
+Aggregation Consumer
+      ↓
+Redis Hash
+```
+
+Statistics can be retrieved through:
+
+```http
+GET /movies/{movieId}/stats
+```
 
 Example:
 
-GET /movies/{movieId}/stats
-
-Response:
-
+```json
 {
   "movieId": 123,
   "likeCount": 57
 }
+```
 
+Redis structure:
 
-Flow:
-
-MovieLike API
-→ movie_like table + outbox table
-→ Outbox Poller
-→ Redis Stream
-→ Aggregation Consumer
-→ Redis Read Model
-
-Redis read model structure:
-
+```text
 movie:{movieId}:stats
   likeCount = N
+```
 
-Key characteristics:
+This separates transactional writes from frequently accessed read data and reduces repeated database reads.
 
-- Event-driven aggregation using Redis Streams
-- Movie-level like count tracking
-- Redis Hash-based read model for fast stat retrieval
-- Reduced database reads by serving movie statistics directly from Redis
-- Eventual consistency between transactional data and cached read models
-- EventId-based idempotent processing to prevent duplicate aggregation updates
+---
 
-This design separates the write path from the read path, reducing database load while maintaining consistency through durable outbox events.
+# Failed Events vs. Processed Events
 
+The system uses two different persistence mechanisms for two different reliability concerns.
 
+## `failed_events`
 
-### Database Outage Recovery Experiment
+`failed_events` answers:
 
-To validate resilience under downstream database failures, I simulated a MySQL outage while sending burst traffic to the view-event ingestion API.
+> Which events could not be processed successfully, and should they be retried?
 
-During the outage, the API continued accepting events by writing them to Redis Streams instead of depending on immediate database writes. After the database was restored, the consumer resumed processing the backlog and persisted the pending events to MySQL.
+A failure record tracks information such as:
 
-**Results:**
+```text
+eventId
+payload
+error
+retryCount
+status
+```
 
-- Sent 15,031 requests during the database outage
-- Maintained 0% HTTP request failure during the outage
-- Sustained p95 latency around 7.3ms while the database was unavailable
-- Recovered and persisted queued events after database restoration
-- Used idempotent consumers to prevent duplicate writes during replay
+Possible states:
 
-This experiment validated that the ingestion path remained available during database failures and that queued events could be recovered after restoration.
+```text
+FAILED
+RECOVERED
+DEAD
+```
 
+This table supports operational retry and failure tracking.
 
-### Idempotent Event Processing
+---
 
-- Ensured safe reprocessing under at-least-once delivery semantics
-- Designed idempotent operations to prevent duplicate writes and inconsistent state
-- Eliminated race conditions in concurrent environments through atomic processing logic
+## `processed_events`
 
-### Failure Recovery Workflow
+`processed_events` answers:
 
-- Failed events are persisted in a dedicated `failed_events` table
-- Each event tracks retry count and processing status (`FAILED`, `RECOVERED`, `DEAD`)
-- Implemented manual replay endpoint:
-  - `POST /admin/failed-events/{id}/retry`
-- Implemented bulk retry endpoint:
-  - `POST /admin/failed-events/retry?limit=N`
+> Has this event already been successfully processed?
 
-### Recovery Results
+Its purpose is idempotency.
 
-- Simulated 10 failed events in the event pipeline
-- Recovered **7 events (70%)** through controlled retries
-- Remaining **3 events were marked as DEAD** after exceeding retry thresholds
-- Prevented infinite retry loops through bounded retry policies
+For example:
 
+```text
+consumer-1
+    ↓
+business write succeeds
+    ↓
+consumer crashes before ACK
+    ↓
+message remains Pending
+    ↓
+recovery-consumer reclaims it
+```
 
-## Rate Limiting
+Without idempotency protection, the same business operation could be applied twice.
 
-### Design Goal
+Tracking processed event IDs allows replayed events to be recognized and prevents duplicate processing.
 
-To protect the system from excessive traffic and abuse while maintaining predictable performance under concurrent load.
+In short:
 
-### Implementation Strategy
+```text
+failed_events
+= events that could not be processed
 
-- Redis-backed request counter
-- Atomic increment operations for concurrency safety
-- Client IP extraction via `X-Forwarded-For`
-- Filtering before controller execution
+processed_events
+= events that have already been processed
+```
 
-### Future Enhancements
+---
 
-- Sliding window algorithm
-- Token bucket implementation
-- Monitoring request metrics
+# Failed Event Recovery
 
-### Rate Limiting Performance
+Asynchronous processing failures are tracked separately from Redis pending-message recovery.
 
-Implemented a Redis-backed rate limiter (60 req/min) using an atomic Lua script to ensure correct TTL behavior under concurrency.
+The system supports:
 
-Load tested with k6 (5 VUs, 10s) against `/movies/trending`.
+```http
+POST /admin/failed-events/{id}/retry
+```
+
+for a single failed event, and:
+
+```http
+POST /admin/failed-events/retry?limit=N
+```
+
+for bounded bulk retries.
+
+Controlled failure testing produced:
+
+```text
+10 failed events
+      ↓
+7 RECOVERED
+3 DEAD
+```
+
+Bounded retries prevent permanently failing events from entering infinite retry loops.
+
+Failure injection used for these tests is intended to be isolated behind test-only configuration rather than enabled in the normal application path.
+
+---
+
+# Rate Limiting
+
+A Redis-backed rate limiter protects selected endpoints from excessive traffic.
+
+The limiter uses an atomic Lua script so counter updates and expiration behavior remain consistent under concurrency.
+
+Configuration:
+
+```text
+60 requests / minute
+```
+
+k6 test:
+
+```text
+5 virtual users
+10 seconds
+Endpoint: /movies/trending
+```
 
 Results:
-- Total requests: 2,591
-- HTTP 200: 60
-- HTTP 429 (throttled): 2,531
-- p95 latency: 32.67ms
 
-Under concurrent load, the system maintained sub-33ms p95 response time while predictably throttling excess requests with HTTP 429.
+```text
+Total requests: 2,591
+HTTP 200:         60
+HTTP 429:      2,531
+p95 latency:   32.67ms
+```
 
----
-
-## Database Design
-
-- Relational schema modeling using MySQL
-- Transactional operations for consistency
-- SQL optimization and N+1 problem exploration (planned)
+The limiter allowed the configured number of requests and predictably rejected excess traffic.
 
 ---
 
-## DevOps & Tooling
+# Authentication & Refresh Token Rotation
 
-- Dockerized multi-container setup (App + MySQL + Redis)
-- GitHub Actions CI pipeline for automated builds and tests
-- Unit and integration testing using JUnit
+The application uses stateless JWT authentication with Spring Security.
+
+Authentication features include:
+
+- JWT access-token validation
+- BCrypt password hashing
+- authenticated principal extraction
+- user-scoped endpoint protection
+
+Refresh tokens are stored as SHA-256 hashes.
+
+Rotation uses a conditional update:
+
+```sql
+UPDATE refresh_token
+SET token_hash = :newHash,
+    expires_at = :newExpiration
+WHERE member_id = :memberId
+  AND token_hash = :oldHash;
+```
+
+Because the previous token hash must still match, concurrent attempts to reuse the same previous refresh token cannot both successfully rotate it.
 
 ---
 
-## What I Learned
+# Why Redis Streams?
 
-- How backend systems behave under concurrent load
-- Importance of rate limiting and traffic control
-- Trade-offs between caching and database consistency
-- Designing systems for scalability and reliability
+Redis Streams was chosen intentionally for the scope of this project.
+
+The application already uses Redis for caching and rate limiting, while Streams provides the messaging primitives needed for the failure-recovery experiments:
+
+- consumer groups
+- explicit acknowledgments
+- Pending Entries List
+- consumer lag inspection
+- `XCLAIM`-based recovery
+
+This kept the infrastructure relatively small while still allowing at-least-once processing and consumer recovery to be explored directly.
+
+Kafka would be a stronger choice for systems requiring large-scale partitioned throughput, long-lived event retention, or more advanced distributed event-log capabilities.
+
+For this project's workload and learning goals, Redis Streams provided the required reliability primitives with lower operational overhead.
 
 ---
 
-## Performance Experiments (Planned)
+# Engineering Takeaways
 
-- Connection pool monitoring
-- Intentional N+1 query simulation and resolution
-- Cache introduction and latency comparison
-- JWT expiration strategy testing
+### Successful HTTP responses are not enough
+
+The database-outage test initially appeared successful because requests continued succeeding and consumer lag eventually reached zero.
+
+Direct inspection showed that 97 messages were still pending.
+
+Recovery was considered complete only after:
+
+```text
+lag = 0
+pending = 0
+```
+
+### At-least-once delivery requires explicit recovery and idempotency
+
+Redis preserves unacknowledged messages, but the application must decide when and how another consumer reclaims them.
+
+Reprocessing must also be safe against duplicate delivery.
+
+### Failure injection exposes bugs that happy-path testing does not
+
+The MySQL outage exposed a consumer-ownership bug in the pending-message recovery path that normal execution had not revealed.
+
+### Infrastructure limits and consistency guarantees are separate concerns
+
+The Outbox test exposed HikariCP saturation while simultaneously confirming that every successfully committed transaction generated its corresponding event.
+
+---
+
+# Future Improvements
+
+- Export Redis lag, pending-entry, and HikariCP metrics to an observability stack
+- Automate database and consumer failure injection in integration tests
+- Benchmark horizontal consumer scaling and sustained backlog recovery
