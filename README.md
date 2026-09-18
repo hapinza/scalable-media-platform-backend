@@ -314,6 +314,24 @@ reprocessed
 ACK
 ```
 
+### Earlier Availability-Focused Run
+
+Before the end-to-end recovery validation above, I ran a separate database-outage
+load test focused specifically on ingestion availability.
+
+Results:
+
+- 15,031 requests sent while MySQL was unavailable
+- 0% HTTP request failure
+- ~7.3ms p95 latency
+
+This earlier run verified that the Redis-first ingestion path could continue
+accepting traffic during a database outage.
+
+The later 9,657-event experiment used stricter validation criteria by tracking
+both consumer-group lag and pending entries through full recovery, which also
+exposed and led to the fix for the stale-pending recovery bug.
+
 ---
 
 # Consumer Recovery Design
