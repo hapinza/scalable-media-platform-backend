@@ -51,16 +51,21 @@ design decisions rather than on the language alone.
 
 ### Spring Boot
 
-I chose Spring Boot to learn and apply its dependency-injection model
-while building a Java backend.
+I chose Spring Boot to build on my familiarity with Java and learn
+Spring's dependency injection and bean management.
 
-Spring-managed beans let controllers, services, repositories, and
-infrastructure components receive their dependencies through injection.
-This made their relationships explicit without requiring each class to
-construct its own dependencies.
+Controllers, consumers, services, and infrastructure components receive
+their dependencies through constructor injection. For example, the view
+consumer delegates database processing to an injected service rather
+than constructing it directly. This makes dependencies explicit and
+supports testing components with substitute dependencies.
 
-The project also uses Spring's support for HTTP endpoints, security,
-scheduled jobs, and transaction management.
+Spring's transaction and scheduling support also fits the event-processing
+workflows: services define database transaction boundaries, while scheduled
+components publish Outbox events and recover pending messages.
+
+Spring Boot's auto-configuration and starters reduce the setup needed
+to integrate these capabilities.
 
 ### MySQL
 
