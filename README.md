@@ -1,5 +1,11 @@
 # Scalable Media Platform Backend
 
+> **Highlights**
+> - Stopped MySQL under load: 15,031 requests, 0% HTTP failures (~7.3 ms p95) while events queued in Redis Streams
+> - Found a recovery bug: lag drained to 0, but 97 messages stayed pending under another consumer. Fixed with a group-wide pending scan + `XCLAIM` (97 → 37 → 0)
+> - Transactional Outbox: 991/991 committed events published after the poller was restored
+> - [Read the failure experiments →](#failure-recovery-experiments)
+
 A Spring Boot backend for a Netflix-like media application, covering
 movie interactions, view tracking, authentication, and asynchronous
 processing.
