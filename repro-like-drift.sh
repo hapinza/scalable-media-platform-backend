@@ -65,11 +65,16 @@ check() {  # label, expected mysql delta, expected redis delta
   fi
 }
 
+# Let events from earlier activity drain before reading the baseline. This is a
+# bounded wait, so it narrows the window but does not guarantee a drained
+# pipeline; run the script while nothing else is liking this movie.
+sleep "$WAIT"
 M0=$(mysql_count); R0=$(redis_count)
 echo "Baseline: MySQL liked rows $M0 | Redis likeCount $R0"
 if [ "$M0" -ne "$R0" ]; then
   echo "  Note: baseline already differs by $((R0 - M0)) (drift from earlier runs or a missing Redis key)."
-  echo "        The checks below compare changes only, so they are still valid."
+  echo "        The checks below compare changes only, so they stay valid as long as"
+  echo "        no other like events for this movie are in flight during the run."
 fi
 
 echo "1) Send the same like request 10 times"
