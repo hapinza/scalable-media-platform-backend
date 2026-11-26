@@ -14,26 +14,43 @@ import org.springframework.data.repository.query.Param;
 
 
 public interface MovieLikeRepository extends JpaRepository<MovieLike, Long>{
-    // add like in DB (server)
-    Optional<MovieLike> findByMemberIdAndMovieId(Long memberId, Long movieId);
-
+   
     // show the likes in DB (data for front)
     Page<MovieLike> findAllByMember_IdAndLikeTrueOrderByUpdatedAtDesc(Long memberId, Pageable pageable);
 
 
     long countByMovieIdAndLikeTrue(Long movieId);
 
-    @Modifying
+
+    @Modifying 
     @Query(value = """
-            insert into movie_like (member_id, movie_id, is_like, updated_at)
-            values (:memberId, :movieId, :isLike, now())
-            on duplicate key update 
-               is_like = values(is_like),
-               updated_at = values(updated_at)
-            """, nativeQuery = true)
-    int upsertLike(@Param("memberId") Long memberId,
-                    @Param("movieId") Long movieId,
-                    @Param("isLike") boolean isLike);
+                    insert ignore into movie_like (member_id, movie_id, is_like, updated_at)
+                    values(:memberId, :movieId, :isLike, now())
+                    """, nativeQuery = true)
+   int insertIfAbsent(@Param("memberId") Long memberId,
+                        @Param("movieId") Long movieId,
+                        @Param("isLike") boolean isLike);
+
+
+   @Modifying 
+   @Query(value = """
+                   update movie_like
+                        set is_like = :isLike, updated_at = now()
+                   where member_id = :memberId
+                    and movie_id = :movieId
+                    and is_like <> :isLike
+                   """, nativeQuery = true)
+   int updateIfChanged(@Param("memberId") Long memberId,
+                        @Param("movieId") Long movieId,
+                        @Param("isLike") boolean isLike);
+
+   @Modifying 
+   @Query(value = """
+                  delete from movie_like where member_id = :memberId and movie_id = :movieId and is_like = true
+                   """, nativeQuery = true)
+   int deleteIfLiked(@Param("memberId") Long memberId,
+                         @Param("movieId") Long movieId);
+
 
 }
 
