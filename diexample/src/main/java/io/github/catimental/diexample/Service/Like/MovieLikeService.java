@@ -46,27 +46,38 @@ public class MovieLikeService {
         memberRepository.findById(memberId).
                             orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND, "no user"));
 
-        movieLikeRepository.upsertLike(memberId, movieId, like);
+        int inserted = movieLikeRepository.insertIfAbsent(memberId, movieId, like);
 
-        createOutbox(memberId, movieId, like);
+        int delta = 0;
+        if(inserted == 1){
+            delta = like ? 1 : 0;
+        }else{
+            int changed = movieLikeRepository.updateIfChanged(memberId, movieId, like);
+            if(changed == 1) {
+                delta = like ? 1 : -1;
+            }
+        }
 
-        // Use atomic upsert to avoid race conditions from check-then-insert/update logic under concurrency
+        if(delta != 0) createOutbox(memberId, movieId, delta);
 
-        
     }
 
 
-    private void createOutbox(Long memberId, Long movieId, boolean like){
+
+
+
+
+
+
+    private void createOutbox(Long memberId, Long movieId, int delta){
         try{
-            int delta = like ? 1 : -1;
-            String eventType = like ? "LIKE_CREATED" : "LIKE_REMOVED";
 
-
+            String eventType = delta == 1 ? "LIKE_CREATED" : "LIKE_REMOVED";
 
             Map<String, Object> payload = new HashMap<>();
             payload.put("memberId", memberId);
             payload.put("movieId", movieId);
-            payload.put("type", "LIKE_CREATED");
+            payload.put("type", eventType);
             payload.put("delta", delta);
 
             /*
@@ -99,10 +110,9 @@ public class MovieLikeService {
 
 
     public void remove(Long memberId, Long movieId){
-        MovieLike ml = movieLikeRepository.findByMemberIdAndMovieId(memberId, movieId)
-                        .orElseThrow(() -> new ApiException(ErrorCode.LIKE_NOT_FOUND, "There is not like"));
+        int changed = movieLikeRepository.deleteIfLiked(memberId, movieId);
 
-        movieLikeRepository.delete(ml);
+        if(changed == 1) createOutbox(memberId, movieId, -1);
     }
 
 

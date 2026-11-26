@@ -4,6 +4,7 @@
 > - Stopped MySQL under load: 15,031 requests, 0% HTTP failures (~7.3 ms p95) while events queued in Redis Streams
 > - Found a recovery bug: lag drained to 0, but 97 messages stayed pending under another consumer. Fixed with a group-wide pending scan + `XCLAIM` (97 → 37 → 0)
 > - Transactional Outbox: 991/991 committed events published after the poller was restored
+> - Found duplicate like requests inflating the Redis count (10 requests → count 10, DB 1). Fixed with conditional SQL, then tested a code-review deadlock prediction against real InnoDB locks ([details](#like-count-drift), [PR #2](https://github.com/hapinza/scalable-media-platform-backend/pull/2))
 > - [Read the failure experiments →](#failure-recovery-experiments)
 
 A Spring Boot backend for a Netflix-like media application, covering
@@ -246,8 +247,9 @@ MovieLikeAggregationConsumer
 Redis Read Model
 ```
 
-1. `MovieLikeService` updates the like state.
-2. It records the corresponding event in the Outbox.
+1. `MovieLikeService` changes the like state with conditional SQL.
+2. Only if the state actually changed, it records a +1 or −1 event in
+   the Outbox (see [Like Count Drift](#like-count-drift)).
 3. Both writes commit in the same MySQL transaction.
 4. `OutboxPoller` publishes eligible `PENDING` events to
    `stream:movie:liked`.
@@ -464,6 +466,82 @@ committed business transactions = corresponding Outbox events
 This test did not demonstrate that all 1,000 requests succeeded or
 independently verify the final Redis aggregate.
 
+### Like Count Drift
+
+**Problem.** The like API wrote an Outbox event for every request,
+whether or not the like state changed.
+
+```text
+Same like request sent 10 times   →  MySQL liked rows: 1 | Redis likeCount: 10
+Like deleted                      →  MySQL liked rows: 0 | Redis likeCount: 10
+```
+
+**Cause.** A like is *state*, but the code counted it like an *event*.
+
+- `upsertLike` always overwrote the row, so the service could not tell
+  whether anything changed.
+- `createOutbox` took the delta from the request (`like ? +1 : -1`),
+  not from the state change.
+- `remove()` deleted the row without writing an Outbox event.
+- The event `type` was hardcoded to `LIKE_CREATED`.
+
+Event-ID receipts did not help: every duplicate request created a new
+event with a new ID.
+
+**Fix.** Each write is one conditional SQL statement, and its
+affected-row count says what changed:
+
+| Statement | Returns 1 when | Delta |
+| --- | --- | --- |
+| `INSERT IGNORE` | no row existed | +1 for a like, 0 for an unlike |
+| `UPDATE ... WHERE is_like <> :isLike` | the stored value was different | +1 or −1 |
+| `DELETE ... WHERE is_like = true` | a liked row was removed | −1 |
+
+The service writes an Outbox event only when the delta is not 0. The
+comparison and the write happen in the same statement, so there is no
+gap between reading the old value and writing the new one.
+
+**Verification.** `repro-like-drift.sh` sends the same like 10 times,
+then deletes it, and compares MySQL with Redis.
+
+| | MySQL liked rows | Redis likeCount |
+| --- | --- | --- |
+| Before the fix: 10 identical likes | 1 | 10 |
+| Before the fix: after delete | 0 | 10 |
+| After the fix: 10 identical likes | 1 | 1 |
+| After the fix: after delete | 0 | 0 |
+
+**Code review.** I opened the fix as a PR and had it reviewed by
+CodeRabbit. Its two comments were about the repro script and were
+correct, so I applied both: check changes relative to the starting
+counts, and wait for in-flight events before reading them.
+
+I then asked whether two concurrent identical requests could still
+produce two +1 events. It answered no, but predicted a possible
+deadlock: both transactions take a shared lock in `INSERT IGNORE`,
+then both wait for an exclusive lock in `UPDATE`. I had expected the
+same thing.
+
+**Testing the prediction.** I ran the two transactions by hand in two
+MySQL sessions (MySQL 8.0.46) and read `performance_schema.data_locks`.
+
+- No duplicate +1. This part of the prediction held.
+- The deadlock did not happen. After `INSERT IGNORE` hit the duplicate,
+  the first transaction also held an exclusive lock at the end of the
+  primary key (the auto-increment tail). The second request waited
+  there, before it could take its own shared lock, so the two
+  transactions never held shared locks at the same time.
+- Something I did not expect: while that first transaction is open,
+  **any** new `movie_like` insert waits, even for a different member
+  and movie. I confirmed this with an unrelated insert.
+
+Transactions here are short, so I recorded this as follow-up work
+instead of changing the design in the same PR.
+
+**What the fix does not do.** Drift that already happened stays. After
+the fix, a movie used in the earlier repro still showed Redis 10
+against MySQL 0. Repairing it needs a periodic recount from MySQL.
+
 ## Failed-Event Tracking
 
 `failed_events` records failed processing attempts and supports
@@ -574,9 +652,15 @@ diexample/src/main/java/io/github/catimental/diexample/
 - Redis-first ingestion depends on Redis availability and durability.
   A MySQL-only outage test does not establish safety under Redis failure.
 - Redis receipt expiry limits the duplicate-protection window.
-- Event deduplication does not prevent repeated API calls from creating
-  different event IDs for the same business action. Like-state
-  transitions and cancellation publication need further review.
+- Like counts that drifted before the [like fix](#like-count-drift)
+  are not repaired. This needs a periodic recount from MySQL.
+- When the Redis stats key is missing, the consumer's increment starts
+  from 0 while the stats API falls back to a MySQL count. The two paths
+  can disagree until a recount runs.
+- A duplicate `INSERT IGNORE` holds an exclusive lock on the
+  auto-increment tail until commit, briefly blocking all new like
+  inserts.
+- `PUT {"like": false}` and `DELETE` overlap in meaning.
 - Recovery behavior must be verified separately for each consumer
   group; the documented view-recovery test does not validate like
   pending-entry recovery.
